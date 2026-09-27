@@ -6,6 +6,8 @@ It is the first day of Ghost Month. On a mountain road outside Tainan, you find 
 
 Every time you refuse the marriage, someone in your family disappears. Nobody else notices they're gone.
 
+**▶ Play it: https://blinky1994.github.io/red-envelope/**
+
 > **Status:** Day One of seven is playable.
 
 ## Play
