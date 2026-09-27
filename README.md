@@ -10,6 +10,8 @@ Every time you refuse the marriage, someone in your family disappears. Nobody el
 
 > **Status:** complete. Seven days, three endings. Some of them need you to remember.
 
+📖 The full design (story, systems, horror toolkit, art and audio direction) is in the [Game Design Document](docs/GAME_DESIGN.md).
+
 ## Play
 
 The game is plain HTML, CSS and JavaScript, with no build step and no dependencies. Serve the folder and open it in a browser:
@@ -40,6 +42,7 @@ js/story.js       the script: every scene, line and choice (start here to write)
 js/art.js         layered SVG scenes, paper-effigy characters, items
 js/engine.js      story runner, lighting/fog/parallax renderer, UI panels
 js/audio.js       synthesized ambience and sound effects
+docs/GAME_DESIGN.md  the game design document
 ```
 
 The script format is documented at the top of `js/story.js`. To add a chapter, write new scene nodes there; no engine changes are needed.
