@@ -621,3 +621,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   font-family: system-ui, sans-serif; text-align: center;
 }
 .title-her { min-height: 1.3em; margin: -1rem 0 1.4rem; font-family: system-ui, sans-serif; font-size: .85rem; letter-spacing: .05em; color: #ff5a5a; }
+
+/* an instant change: no fade, no settling; it was always like this */
+.char.instant { animation: none; }

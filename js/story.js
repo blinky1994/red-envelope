@@ -61,15 +61,25 @@ const REMOVAL_ORDER = ['ama', 'wen', 'mom'];
 const has = (s, k) => s.family.includes(k);
 const got = (s, k) => s.items.includes(k);
 const give = k => s => { if (!s.items.includes(k)) s.items.push(k); };
-const familyOnScreen = s => ['mom', 'ama', 'wen'].filter(k => has(s, k));
+// Everyone keeps their seat. Whoever is gone leaves an empty chair where they sat.
+const familyOnScreen = s => ['mom', 'ama', 'wen'].map(k => (has(s, k) ? k : `seat_${k}`));
 const first = s => !s.flags.loop;
 
+// A refusal doesn't take anyone straight away. It runs up a debt, and the
+// debt is collected later, somewhere you can see it: at the dinner table,
+// through the smoke, overnight. Nobody ever reacts.
 function refuse(s) {
   s.refusals++;
-  const gone = REMOVAL_ORDER.find(k => has(s, k));
-  if (gone) {
+  s.debt = (s.debt || 0) + 1;
+}
+function collect(s) {
+  while ((s.debt || 0) > 0) {
+    s.debt--;
+    const gone = REMOVAL_ORDER.find(k => has(s, k));
+    if (!gone) continue;
     s.family = s.family.filter(k => k !== gone);
     s.lost.push(gone);
+    s.flags.vanished = gone;
   }
 }
 
@@ -298,6 +308,12 @@ const STORY = {
       "She presses a folded gold paper ingot into your hand. The folds are careful and a little crooked. You put it in your pocket, next to the envelope.",
       'For a while it is almost normal. Soup. Rice. Xiao-Wen complaining about school. The rain on the roof. The old clock on the wall.',
       'Mom asks if you have a girlfriend yet. Everyone waits a little too long for your answer.',
+      { if: s => (s.debt || 0) > 0, beat: 1400 },
+      { if: s => (s.debt || 0) > 0, do: collect, chars: familyOnScreen, cut: true, redraw: true, t: 'You look up to answer.' },
+      { if: s => s.flags.vanished && !s.flags.vanishSeen, who: 'mom', t: 'Well? Do you?' },
+      { if: s => s.flags.vanished && !s.flags.vanishSeen, t: 'You say no. Mom sighs. Xiao-Wen laughs at you.' },
+      { if: s => s.flags.vanished && !s.flags.vanishSeen, do: s => { s.flags.vanishSeen = true; }, slow: true,
+        t: 'At the end of the table, a bowl of soup is going cold in front of an empty chair.' },
       { beat: 1400 },
       'The dog will not come inside.',
       'It sits at the edge of the courtyard in the rain, not barking, not moving. It is staring at you.',
@@ -416,9 +432,12 @@ const STORY = {
       { slow: true, t: "The smell isn't paper. It's hair. It's skin." },
       { fx: 'memory', sfx: 'water', who: 'girl', style: 'memory', t: '— it hurts, A-Wei, it’s so cold, don’t let go —' },
       { ambient: ['room', 'suona'], t: 'Somewhere down in the valley, a suona begins to play.' },
-      { fx: 'red-off', t: 'When the smoke clears, the envelope is gone. Nobody speaks for the rest of the night.' },
+      { fx: 'red-off', do: s => { refuse(s); collect(s); }, chars: familyOnScreen, cut: true, redraw: true,
+        t: 'When the smoke clears, the envelope is gone. Mom opens a window to let the smoke out.' },
       { beat: 1400 },
-      { do: refuse, slow: true, t: "When you undress for bed, it's back in your pocket. You don't need to look." },
+      { slow: true, t: 'Across the table, a pair of chopsticks rests on a full bowl of rice. Nobody reaches for it.' },
+      'Nobody speaks for the rest of the night.',
+      { slow: true, t: "When you undress for bed, the envelope is back in your pocket. You don't need to look." },
     ],
     go: 'room',
   },
@@ -602,7 +621,7 @@ const STORY = {
   morning: {
     bg: 'black', rain: false, chars: [], item: null, ambient: [],
     lines: [
-      { beat: 2000 },
+      { do: collect, beat: 2000 },
       { ambient: ['room', 'morning'], t: 'You wake up. Birds. Grey light.' },
       { slow: true, t: 'You are not in your bed.' },
       { fx: 'flicker', bg: 'hall', t: "You're standing in the ancestral hall, barefoot, in front of the altar." },

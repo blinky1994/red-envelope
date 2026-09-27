@@ -641,8 +641,17 @@ window.ART = (() => {
       </g>`, 4);
   }
 
+  // An empty chair, pulled up to the table. Nobody mentions it.
+  const seat = () => svgChar('st', '0 0 400 800', '', `
+    <rect x="112" y="430" width="20" height="370" fill="#2a1a10" stroke="${INK}" stroke-width="2"/>
+    <rect x="268" y="430" width="20" height="370" fill="#2a1a10" stroke="${INK}" stroke-width="2"/>
+    <rect x="98" y="418" width="204" height="30" rx="5" fill="#3a2414" stroke="${INK}" stroke-width="2.5"/>
+    <rect x="132" y="500" width="136" height="14" fill="#2a1a10" stroke="${INK}" stroke-width="1.5"/>
+    <rect x="132" y="580" width="136" height="14" fill="#2a1a10" stroke="${INK}" stroke-width="1.5"/>`);
+
   const CHARS = {
     mom, ama, wen,
+    seat_mom: seat, seat_ama: seat, seat_wen: seat,
     men: () => svgChar('mn', '0 0 1100 800', '',
       brother(0, 40, 0.95, -4, [100, 480]) + brother(700, 30, 0.97, 12, [250, 560]) + brother(350, 0, 1, -2, [60, 600]), 4),
     bride: () => bride(false),

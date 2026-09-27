@@ -229,6 +229,13 @@
       el.bg.classList.add('fading'); el.front.classList.add('fading');
       setTimeout(() => {
         if (my !== token) return;
+        build(name);
+        if (firstLoad) dark = scene.dark;
+        el.bg.classList.remove('fading'); el.front.classList.remove('fading');
+      }, firstLoad ? 0 : 420);
+    }
+
+    function build(name) {
         scene = ART.scene(name, S);
         el.bg.innerHTML = ''; el.front.innerHTML = ''; layerEls = [];
         for (const L of scene.layers) {
@@ -241,10 +248,10 @@
         // characters get a key light so they emerge from the dark rather than vanish in it
         if (scene.charLight !== 0) scene.lights = scene.lights.concat([{ x: 800, y: 400, r: 0.32, c: '150,155,150', i: scene.charLight || 0.45, fl: 'steady', depth: 0.35, forChars: true }]);
         darkTarget = scene.dark;
-        if (firstLoad) dark = scene.dark;
-        el.bg.classList.remove('fading'); el.front.classList.remove('fading');
-      }, firstLoad ? 0 : 420);
     }
+    // Rebuild the current scene from the current state, with no fade:
+    // the photo on the wall is simply different now.
+    function redraw() { if (curName) build(curName); }
 
     addEventListener('resize', resize);
     addEventListener('pointermove', e => {
@@ -283,6 +290,7 @@
       setScene,
       apparition,
       sag,
+      redraw,
       current: () => curName,
       reset() { curName = null; },
       setRain(v) { rainOn = !!v; el.rain.classList.toggle('on', rainOn); },
@@ -290,10 +298,12 @@
     };
   })();
 
-  function setChars(list) {
+  function setChars(list, instant = false) {
     const keys = (list || []).map(c => (typeof c === 'string' ? c : c.k));
     [...el.chars.children].forEach(ch => {
-      if (keys.includes(ch.dataset.k) || ch.classList.contains('leaving')) return;
+      if (keys.includes(ch.dataset.k)) return;
+      if (instant) { ch.remove(); return; }
+      if (ch.classList.contains('leaving')) return;
       ch.classList.add('leaving');
       setTimeout(() => ch.remove(), 420);
     });
@@ -301,7 +311,7 @@
       let ch = [...el.chars.children].find(c => c.dataset.k === k && !c.classList.contains('leaving'));
       if (!ch) {
         ch = document.createElement('div');
-        ch.className = 'char';
+        ch.className = instant ? 'char instant' : 'char';
         ch.dataset.k = k;
         ch.innerHTML = ART.char(k);
         el.chars.appendChild(ch);
@@ -347,7 +357,8 @@
   function applyScene(o) {
     if ('bg' in o) World.setScene(val(o.bg));
     if ('rain' in o) World.setRain(val(o.rain));
-    if ('chars' in o) setChars(val(o.chars));
+    if ('chars' in o) setChars(val(o.chars), !!o.cut);
+    if (o.redraw) World.redraw();
     if ('item' in o) setItem(val(o.item));
     if ('ambient' in o) Sound.ambient(val(o.ambient));
     if ('fx' in o) doFx(val(o.fx));
