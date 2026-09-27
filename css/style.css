@@ -595,9 +595,6 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .bubble.her span { background: #2a1416; color: #f0dede; border-bottom-left-radius: 4px; }
 .bubble.you { align-self: flex-end; align-items: flex-end; }
 .bubble.you span { background: #1e2a3a; color: #dde6f0; border-bottom-right-radius: 4px; }
-.quick { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid #1c1c20; }
-.quick button { flex: 1; padding: 7px 4px; border-radius: 12px; background: #16161a; color: #bbb; font-size: .78rem; }
-.quick button:hover { background: #222228; color: #fff; }
 
 /* ---------- she's calling ---------- */
 #incoming {

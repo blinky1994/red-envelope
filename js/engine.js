@@ -705,9 +705,10 @@
   document.addEventListener('click', e => { if (!e.target.closest('#vol-pop, #btn-mute')) volPop.hidden = true; });
 
   // ---------------------------------------------------------------- her messages
-  // Qiu-Yue texts you. She never stops. Paying attention feeds her: reading
-  // makes her answer at once, replying sets off a burst, picking up her calls
-  // makes her call more. Ignoring her is the only thing that slowly calms her.
+  // Qiu-Yue texts you, from dinner onward. It only goes one way: you can't
+  // answer. Paying attention still feeds her: reading makes her write back at
+  // once, picking up her calls makes her call more. Ignoring her is the only
+  // thing that slowly calms her.
   // Her messages live in `mem`, so they keep arriving between sessions.
   const Her = (() => {
     const st = mem.her = Object.assign({ active: false, msgs: [], attention: 0, lastAt: 0, lastCallAt: 0 }, mem.her || {});
@@ -722,7 +723,6 @@
         'i can see the light from your window', 'are you angry with me', 'please', 'please', 'did i do something wrong', 'you’re reading something else',
         'look at me', 'i waited twenty years. you can’t wait one minute?'],
       seen: ['you read it', 'i saw that', 'you’re here', 'don’t close it', 'stay', 'talk to me', 'i knew you’d look', 'hi', 'hi', 'you always look'],
-      replied: ['you answered', 'you answered me', 'i knew you would', 'say it again', 'you do remember', 'we can talk every night now', 'i’ll never stop now'],
       late: ['i’m at the window', 'it’s so cold in the water', 'our room is ready', 'i set a bowl for you', 'can you hear the frogs? i made them stop', 'i’m in the hall',
         { t: 'your ama is lying to you', if: () => has('ama') }, { t: 'she folded it crooked. the ingot', if: () => lost('wen') },
         { t: 'your house is so quiet now', if: () => S && S.lost.length >= 2 }],
@@ -761,15 +761,6 @@
       }
       saveMem();
       updateHud();
-    }
-
-    function reply(text) {
-      st.msgs.push({ from: 'you', t: text, at: Date.now(), read: true });
-      st.attention += 4;
-      saveMem();
-      renderThread();
-      const n = 2 + Math.floor(Math.random() * 3);
-      for (let k = 0; k < n; k++) setTimeout(() => receive(pick('replied')), 900 + k * (700 + Math.random() * 600));
     }
 
     function renderThread() {
@@ -822,8 +813,9 @@
     }
     let nextAt = Date.now() + 25000;
     setInterval(() => {
-      if (!started || !S || !S.flags.envelope) return;
+      if (!started || !S || !S.flags.herAwake) return;
       if (!st.active) { st.active = true; st.lastAt = Date.now(); saveMem(); }
+      if (!S.flags.herFirst) { S.flags.herFirst = true; nextAt = Date.now() + 9000 + Math.random() * 6000; }
       if (Date.now() - (st.decayAt || 0) > 40000) {           // ignoring her, slowly, works
         st.decayAt = Date.now();
         if (!threadOpen() && st.attention > 0) st.attention -= 1;
@@ -858,8 +850,6 @@
       $('#phone-thread-view').hidden = true;
       $('#phone-list-view').hidden = false;
     });
-    document.querySelectorAll('.quick [data-reply]').forEach(b =>
-      b.addEventListener('click', e => { e.stopPropagation(); reply(b.dataset.reply); }));
 
     return {
       unread, total: () => st.msgs.filter(m => m.from === 'her').length, attention: () => st.attention,

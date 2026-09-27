@@ -286,7 +286,7 @@ const STORY = {
   home: {
     bg: 'house', rain: false, chars: familyOnScreen, item: null, ambient: ['room', 'rain_in', 'clock'],
     lines: [
-      "Ama's house, at the end of the village. The only lit window for a kilometer.",
+      { do: s => { s.flags.herAwake = true; }, t: "Ama's house, at the end of the village. The only lit window for a kilometer." },
       "Inside it's warm. It smells of incense and lotus root and the mothballs in Ama's cupboards. It smells like being a child.",
       'On the ancestral altar, three extra bowls of rice are set out for the dead. Ghost Month manners.',
       { if: s => has(s, 'ama'), who: 'ama', t: 'A-Wei! Look at you, soaked through. So thin! Taipei doesn’t feed you. Sit, sit. The dead have eaten. Now the living eat.' },
