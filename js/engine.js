@@ -254,8 +254,36 @@
     resize();
     requestAnimationFrame(frame);
 
+    // Scene space (1600×900) -> CSS px rect on the stage.
+    function sceneRect(x, y, rw, rh) {
+      const sc = Math.max(w / ART.W, h / ART.H);
+      const ox = (w - ART.W * sc) / 2, oy = (h - ART.H * sc) / 2;
+      return { left: ox + x * sc, top: oy + y * sc, width: rw * sc, height: rh * sc };
+    }
+    // A dark figure where one shouldn't be. mode 'appear' fades in and out in
+    // place; 'pass' slides across (e.g. behind a window). Always under the lights.
+    function apparition({ x, y, w: rw, h: rh, mode = 'appear', ms = 6000, tint = '#050506' }) {
+      const d = document.createElement('div');
+      d.className = `apparition ${mode}`;
+      Object.assign(d.style, Object.fromEntries(Object.entries(sceneRect(x, y, rw, rh)).map(([k, v]) => [k, v + 'px'])));
+      d.style.animationDuration = ms + 'ms';
+      d.innerHTML = `<svg viewBox="0 0 100 200" preserveAspectRatio="xMidYMax meet"><circle cx="50" cy="40" r="22" fill="${tint}"/><path d="M8 200 C10 110 26 72 50 70 C74 72 90 110 92 200Z" fill="${tint}"/></svg>`;
+      el.bg.after(d);
+      setTimeout(() => d.remove(), ms + 100);
+    }
+    // The power in an old village house sags, then comes back slowly.
+    function sag() {
+      if (!scene) return;
+      const was = darkTarget, sc = scene;
+      darkTarget = Math.min(0.97, was + 0.14);
+      setTimeout(() => { if (scene === sc) darkTarget = was; }, 1800);
+    }
+
     return {
       setScene,
+      apparition,
+      sag,
+      current: () => curName,
       reset() { curName = null; },
       setRain(v) { rainOn = !!v; el.rain.classList.toggle('on', rainOn); },
       extraLights,
@@ -337,7 +365,7 @@
     }
     lastDay = show ? S.day : null;
     // Phone: new contact after the envelope, missed call after 3:33.
-    const phoneNew = !!S && ((S.flags.envelope && !S.flags.seenContact) || (S.flags.night && !S.flags.seenCall));
+    const phoneNew = !!S && ((S.flags.envelope && !S.flags.seenContact) || (S.flags.night && !S.flags.seenCall) || !!S.flags.unreadMsg);
     if (phoneNew && el.phoneBadge.hidden) {
       pulseClass($('#btn-phone'), 'buzz', 1000);
       Sound.sfx('ring');
@@ -606,6 +634,11 @@
       { n: FAMILY_CONTACTS.wen, k: 'wen' },
     ].filter(c => !c.k || S.family.includes(c.k));
     let html = '';
+    if (S.msgs && S.msgs.length) {
+      html += `<li class="section">Messages</li>` + S.msgs.slice().reverse().map(m =>
+        `<li><div class="msg"><span class="msg-from">♥ 秋月 <em>${esc(m.at)}</em></span>${esc(m.text)}</div></li>`).join('');
+      S.flags.unreadMsg = false;
+    }
     if (S.flags.envelope) {
       html += `<li class="section">Favorites</li><li><button class="fav" data-bride="1">♥ 秋月<span class="c-sub">${S.flags.night ? 'Missed call · 3:33 AM' : 'wife'}</span></button></li>`;
       html += `<li class="section">All contacts</li>`;
@@ -796,6 +829,113 @@
     idle = 0;
     if (lurkLevel) { lurkLevel = 0; el.lurk.innerHTML = ''; World.extraLights.length = 0; }
   }
+
+  // ---------------------------------------------------------------- unease director
+  // Small, quiet, unexplained events while you read. Never loud, never sudden,
+  // never acknowledged by the story. Each one fits the scene it happens in;
+  // they come more often as the story darkens.
+  const Unease = (() => {
+    const inScene = (...names) => () => names.includes(World.current());
+    const indoors = inScene('house', 'house_watch', 'bedroom', 'hall');
+    const has = sel => () => !!el.chars.querySelector(sel);
+    const after = flag => () => !!(S && S.flags[flag]);
+    const all = (...fs) => () => fs.every(f => f());
+    const HER_TEXTS = [
+      'are you awake',
+      'the water is warm tonight',
+      'you still have my hand in your pocket',
+      'i can hear the clock in your house',
+      'i folded one for you too',
+      "don't let go this time",
+      'i’m at the window',
+      '…',
+      'you used to hum this',
+      'count the bowls',
+    ];
+
+    const EVENTS = [
+      { id: 'knock', w: 3, ok: indoors, run: () => Sound.sfx('knockFar') },
+      { id: 'steps', w: 2, ok: indoors, run: () => Sound.sfx('stepsAbove') },
+      { id: 'hum', w: 2, ok: after('envelope'), run: () => Sound.sfx('hum') },
+      { id: 'drip', w: 1, ok: all(indoors, after('envelope')), run: () => Sound.sfx('dripNear') },
+      { id: 'sag', w: 2, ok: inScene('house', 'house_watch', 'hall', 'bedroom'), run: () => World.sag() },
+
+      // the living, all at once, stop looking at their food and look at you
+      { id: 'glance', w: 3, ok: all(has('[data-k="mom"],[data-k="ama"],[data-k="wen"]'), after('envelope')), run() {
+        const fam = [...el.chars.querySelectorAll('[data-k="mom"],[data-k="ama"],[data-k="wen"]')];
+        fam.forEach(c => c.classList.add('watching'));
+        setTimeout(() => fam.forEach(c => c.classList.remove('watching')), 3800);
+      } },
+      // the effigies' heads tilt while you're reading, then settle
+      { id: 'tilt', w: 3, ok: has('[data-k="men"]'), run() {
+        const m = el.chars.querySelector('[data-k="men"]');
+        m.style.setProperty('--tilt', `${(Math.random() < 0.5 ? -1 : 1) * (4 + Math.random() * 5)}deg`);
+        m.classList.add('tilted');
+        setTimeout(() => m.classList.remove('tilted'), 9000);
+      } },
+
+      // someone standing where no one should be
+      { id: 'roadside', w: 2, ok: inScene('road', 'car', 'car_env'), run: () => World.apparition({ x: 1188, y: 470, w: 34, h: 80, ms: 5000 }) },
+      { id: 'window', w: 3, ok: inScene('bedroom'), run: () => World.apparition({ x: 900, y: 240, w: 160, h: 300, mode: 'pass', ms: 7000, tint: '#03050a' }) },
+      { id: 'doorway', w: 2, ok: inScene('hall'), run: () => World.apparition({ x: 10, y: 360, w: 110, h: 420, ms: 6500, tint: '#0a0d12' }) },
+      { id: 'pane', w: 1, ok: inScene('house'), run: () => World.apparition({ x: 290, y: 330, w: 80, h: 160, ms: 6000, tint: '#1b2530' }) },
+
+      // she texts you
+      { id: 'text', w: 2, ok: () => !!(S && S.flags.envelope) && (S.msgs || []).length < HER_TEXTS.length, run() {
+        S.msgs = S.msgs || [];
+        const used = new Set(S.msgs.map(m => m.text));
+        const pool = HER_TEXTS.filter(t => !used.has(t));
+        const d = new Date();
+        S.msgs.push({ text: pool[Math.floor(Math.random() * pool.length)], at: `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}` });
+        S.flags.unreadMsg = true;
+        Sound.sfx('buzz');
+        pulseClass($('#btn-phone'), 'buzz', 900);
+        el.phoneBadge.hidden = false;
+      } },
+
+      // the countdown slips a day ahead, just for a moment
+      { id: 'seal', w: 1, ok: () => !!(S && S.day > 1), run() {
+        const num = el.countdown.querySelector('.num');
+        num.textContent = NUMERALS[S.day - 1];
+        setTimeout(() => { num.textContent = NUMERALS[S.day] || S.day; }, 650);
+      } },
+
+      // a word in what you just read is, briefly, a different word
+      { id: 'word', w: 2, ok: () => !!(S && S.flags.envelope) && !typing && !el.textbox.hidden && el.text.classList.contains('narr'), run() {
+        const line = fullText, words = line.split(' ');
+        const idx = words.map((w, i) => (w.replace(/\W/g, '').length > 3 ? i : -1)).filter(i => i >= 0);
+        if (!idx.length) return;
+        const i = idx[Math.floor(Math.random() * idx.length)];
+        const swap = ['her', 'cold', 'wife', 'water', 'hers', 'drowned', 'seven'][Math.floor(Math.random() * 7)];
+        words[i] = words[i].replace(/[A-Za-z’'-]+/, swap);
+        el.text.textContent = words.join(' ');
+        setTimeout(() => { if (fullText === line) el.text.textContent = line; }, 450);
+      } },
+    ];
+
+    let nextAt = Date.now() + 20000, last = null;
+    function tension() {
+      if (!S) return 1;
+      let f = 1;
+      if (S.flags.envelope) f *= 0.75;
+      if (S.flags.night) f *= 0.7;
+      f *= Math.pow(0.9, S.refusals || 0);
+      return f;
+    }
+    setInterval(() => {
+      if (!started || !S || document.hidden || overlayOpen() || bigShowing) return;
+      if (Date.now() < nextAt) return;
+      const pool = EVENTS.filter(e => e.id !== last && e.ok());
+      nextAt = Date.now() + (22000 + Math.random() * 30000) * tension();
+      if (!pool.length) return;
+      let r = Math.random() * pool.reduce((a, e) => a + e.w, 0);
+      const ev = pool.find(e => (r -= e.w) < 0) || pool[0];
+      last = ev.id;
+      ev.run();
+    }, 1000);
+    return { fire: id => { const e = EVENTS.find(x => x.id === id); if (e) e.run(); } };
+  })();
+  window.__unease = Unease; // for playtesting: __unease.fire('glance')
 
   // ---------------------------------------------------------------- input
   el.stage.addEventListener('click', e => {

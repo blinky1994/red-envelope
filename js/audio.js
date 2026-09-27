@@ -400,6 +400,48 @@ window.Sound = (() => {
       });
       SFX.tinnitus(t + 3.05);
     },
+    // ---- quiet, unexplained things (used by the unease director) ----
+    knockFar(t) { // somewhere else in the house
+      const b = bus(1.4, Math.random() * 1.6 - 0.8);
+      const n = 2 + Math.floor(Math.random() * 2);
+      for (let k = 0; k < n; k++) { burst(t + k * 0.6, 0.16, 0.2, 'lowpass', 320, 1, b); thump(t + k * 0.6, 95, 45, 0.16, 0.14, b); }
+    },
+    stepsAbove(t) { // slow footsteps in the room over your head
+      const b = bus(0.9, Math.random() * 0.8 - 0.4);
+      const lp = filter('lowpass', 240); lp.connect(b);
+      const n = 4 + Math.floor(Math.random() * 4);
+      for (let k = 0; k < n; k++) { const s = t + k * (0.7 + Math.random() * 0.25); burst(s, 0.2, 0.35, 'lowpass', 400, 1, lp); thump(s, 70, 40, 0.2, 0.25, lp); }
+    },
+    hum(t) { // a child humming a few notes, far away
+      const b = bus(1.3, Math.random() * 1.4 - 0.7);
+      const notes = [523, 587, 659, 784, 880];
+      let s = t;
+      const n = 3 + Math.floor(Math.random() * 3);
+      for (let k = 0; k < n; k++) {
+        const f = notes[Math.floor(Math.random() * notes.length)], d = 0.4 + Math.random() * 0.4;
+        const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+        const vib = ctx.createOscillator(); vib.frequency.value = 5; const vg = ctx.createGain(); vg.gain.value = 4; vib.connect(vg).connect(o.frequency);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(0.035, s + 0.12); g.gain.linearRampToValueAtTime(0, s + d);
+        o.connect(filter('lowpass', 1400)).connect(g).connect(b);
+        o.start(s); o.stop(s + d + 0.05); vib.start(s); vib.stop(s + d + 0.05);
+        s += d + 0.05;
+      }
+    },
+    dripNear(t) { // water, close by, where there shouldn't be any
+      const b = bus(0.5, 0.3);
+      for (let k = 0; k < 5; k++) {
+        const s = t + k * (0.9 + Math.random() * 0.5);
+        const o = ctx.createOscillator();
+        o.frequency.setValueAtTime(800 + Math.random() * 200, s); o.frequency.exponentialRampToValueAtTime(2000, s + 0.04);
+        const g = ctx.createGain(); g.gain.setValueAtTime(0.28, s); g.gain.exponentialRampToValueAtTime(0.001, s + 0.1);
+        o.connect(g).connect(b); o.start(s); o.stop(s + 0.12);
+      }
+    },
+    buzz(t) { // a single soft phone vibration
+      const lp = filter('lowpass', 300); lp.connect(master);
+      tone(118, t, 0.35, 0.18, 'square', lp);
+    },
     tinnitus(t) { // the ringing left behind after a shock
       const o = ctx.createOscillator(); o.frequency.value = 7200;
       const g = ctx.createGain();

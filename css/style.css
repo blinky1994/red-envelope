@@ -353,8 +353,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .phone-body {
   display: flex;
   flex-direction: column;
-  width: min(320px, calc(100vw - 32px));
-  height: min(600px, 86vh);
+  width: min(21rem, calc(100vw - 32px));
+  height: min(40rem, 86vh);
   padding: 16px 16px 18px;
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   background: #0b0b0d;
@@ -368,6 +368,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 #contacts { list-style: none; }
 #contacts li button {
   display: block;
+  font-size: 1rem;
   width: 100%;
   padding: 12px 10px;
   text-align: left;
@@ -552,3 +553,29 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .inv-venue { margin-bottom: 1rem; }
 .inv-guests { font-size: .85rem; letter-spacing: .05em; opacity: .85; padding-top: .8rem; border-top: 1px solid rgba(216,180,84,.4); margin-bottom: .6rem; }
 .inv-note { font-size: .9rem; font-style: italic; opacity: .8; }
+
+/* ---------- unease events ---------- */
+.apparition { position: absolute; pointer-events: none; filter: blur(1.4px); opacity: 0; }
+.apparition svg { width: 100%; height: 100%; display: block; }
+.apparition.appear { animation: apparitionAppear ease-in-out both; }
+.apparition.pass { animation: apparitionPass linear both; }
+@keyframes apparitionAppear { 0% { opacity: 0; } 30% { opacity: .85; } 70% { opacity: .85; } 100% { opacity: 0; } }
+@keyframes apparitionPass {
+  0% { opacity: 0; transform: translateX(0); }
+  12% { opacity: .9; }
+  88% { opacity: .9; }
+  100% { opacity: 0; transform: translateX(170%); }
+}
+
+/* the living look down at their food... until they don't */
+.char .eyes { transform: translate(-2px, 3px); transition: transform 1.6s ease-in-out; }
+.char.watching .eyes { transform: translate(0, -1px); }
+
+/* effigy heads tilt while you read */
+.char .effhead { transform-box: fill-box; transform-origin: 50% 100%; transition: transform 6s ease-in-out; }
+.char.tilted .effhead { transform: rotate(var(--tilt, 6deg)); }
+
+/* her messages on the phone */
+.msg { padding: 10px; border-bottom: 1px solid #1c1c20; color: #e8e0e0; font-size: .9rem; }
+.msg-from { display: block; margin-bottom: 3px; font-size: .72rem; color: #ff5a5a; }
+.msg-from em { font-style: normal; color: #777; margin-left: 6px; }

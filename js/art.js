@@ -482,8 +482,8 @@ window.ART = (() => {
     <ellipse cx="200" cy="222" rx="56" ry="66" fill="${tone}" stroke="${INK}" stroke-width="3"/>
     <path d="M164 204 q13 -7 26 -1 M210 203 q13 -6 26 1" stroke="${INK}" stroke-width="3" fill="none" stroke-linecap="round"/>
     <ellipse cx="178" cy="219" rx="10" ry="6" fill="#f4eee2" stroke="${INK}" stroke-width="1.5"/><ellipse cx="222" cy="219" rx="10" ry="6" fill="#f4eee2" stroke="${INK}" stroke-width="1.5"/>
-    <circle cx="179" cy="219" r="4.2" fill="#2a1a12"/><circle cx="223" cy="219" r="4.2" fill="#2a1a12"/>
-    <circle cx="180.5" cy="217.5" r="1.3" fill="#fff"/><circle cx="224.5" cy="217.5" r="1.3" fill="#fff"/>
+    <g class="eyes"><circle cx="179" cy="219" r="4.2" fill="#2a1a12"/><circle cx="223" cy="219" r="4.2" fill="#2a1a12"/>
+    <circle cx="180.5" cy="217.5" r="1.3" fill="#fff"/><circle cx="224.5" cy="217.5" r="1.3" fill="#fff"/></g>
     <path d="M167 215 q11 -7 22 0 M211 215 q11 -7 22 0" stroke="${INK}" stroke-width="2" fill="none"/>
     <path d="M200 226 l-4 20 l6 2" stroke="#8a6a52" stroke-width="2" fill="none"/>
     <path d="M186 262 q14 5 28 0" stroke="#8a3a2a" stroke-width="3" fill="none" stroke-linecap="round"/>
@@ -583,13 +583,13 @@ window.ART = (() => {
         <path d="M110 720 l-2 40 M170 700 l1 60 M260 730 l2 36" stroke="#000" stroke-opacity=".35" stroke-width="4"/>`)}
       ${tear(tearAt[0], tearAt[1])}
       <ellipse cx="60" cy="705" rx="15" ry="12" fill="#ece6d6" stroke="${INK}" stroke-width="2"/><ellipse cx="340" cy="705" rx="15" ry="12" fill="#ece6d6" stroke="${INK}" stroke-width="2"/>
-      <g transform="rotate(${tilt} 200 230)">
+      <g transform="rotate(${tilt} 200 230)"><g class="effhead">
         ${effigyFace(24, 0)}
         <path d="M142 214 C136 146 264 146 258 214 C246 180 154 180 142 214Z" fill="#0b0b0e" stroke="${INK}" stroke-width="3"/>
         <path d="M200 166 L200 186" stroke="#2a2a30" stroke-width="2"/>
         <path d="M150 196 l-2 30 M252 196 l2 26" stroke="#0b0b0e" stroke-width="5" stroke-linecap="round"/>
         <path d="M176 296 l-1 16 M222 294 l1 12" stroke="#8aa0a8" stroke-opacity=".5" stroke-width="2"/>
-      </g></g>`;
+      </g></g></g>`;
   }
 
   function bride(withHand) {
