@@ -455,7 +455,7 @@
   function endNode() {
     const choices = (val(node.choices) || []).filter(c => !c.if || c.if(S, mem));
     if (choices.length) { showChoices(choices); return; }
-    if (node.end) { showEnd(); return; }
+    if (node.end) { showEnd(node.end); return; }
     const go = val(node.go);
     if (go) goto(go);
   }
@@ -621,6 +621,9 @@
         : d === 1 ? 'The wedding is tomorrow night.'
         : 'The wedding was supposed to be tonight. She is still waiting at the water.';
     }
+    if (mem.lastEnding === 'wedding') line = 'She has her husband now. The water is very still.';
+    if (mem.lastEnding === 'substitute') line = 'Somebody else picked it up.';
+    if (mem.lastEnding === 'true') line = 'There is one more bowl on the altar. Somebody always remembers to fill it.';
     el.titleMem.textContent = line;
     const n = mem.her ? mem.her.msgs.filter(m => m.from === 'her' && !m.read).length : 0;
     $('#title-her').textContent = n ? `${n} unread message${n > 1 ? 's' : ''} from ♥ 秋月` : '';
@@ -648,14 +651,23 @@
 
   // The chapter ends with a wedding invitation, dated on the player's real
   // calendar: six days from tonight, which falls on 七夕, the lovers' night.
-  function showEnd() {
+  // Day One ends on the invitation (and carries on to Day Two); the story's
+  // three endings get a final card of their own.
+  const ENDINGS = ['wedding', 'substitute', 'true'];
+  function showEnd(end = {}) {
     started = false;
+    el.textbox.hidden = true;
+    closeOverlays();
+    setSkip(false);
+    if (end.final) { showFinal(end); return; }
     mem.finished++;
     if (!mem.weddingAt) mem.weddingAt = Date.now() + 6 * DAY_MS;
     saveMem();
-    store.del(SAVE_KEY);
-    el.textbox.hidden = true;
-    closeOverlays();
+    if (end.next) { S.node = end.next; store.set(SAVE_KEY, S); } else store.del(SAVE_KEY);
+    $('#end-kicker').textContent = '第一日 · Day One';
+    $('#end-card').hidden = false;
+    $('#end-final').hidden = true;
+    $('#btn-nextday').hidden = !end.next;
     const date = new Date(mem.weddingAt).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const guests = ['ama', 'mom', 'wen'].filter(k => S.family.includes(k)).map(k => NAME_OF[k]);
     const d = daysLeft();
@@ -670,6 +682,25 @@
     $('#end-note').textContent = d > 1 ? `${d} days.` : d === 1 ? 'Tomorrow.' : 'Tonight.';
     Sound.ambient(['drone', 'suona']);
     setTimeout(() => { el.end.hidden = false; }, 1400);
+  }
+
+  function showFinal(end) {
+    mem.endings = mem.endings || {};
+    mem.endings[end.final] = Date.now();
+    mem.lastEnding = end.final;
+    saveMem();
+    store.del(SAVE_KEY);
+    const found = ENDINGS.filter(e => mem.endings[e]).length;
+    $('#end-kicker').textContent = '終 · The End';
+    $('#end-card').hidden = true;
+    $('#end-final').hidden = false;
+    $('#final-cn').textContent = end.cn;
+    $('#final-en').textContent = end.en;
+    $('#final-count').textContent = `Endings found: ${found} of ${ENDINGS.length}` + (found < ENDINGS.length ? ' · Some of them need you to remember.' : '');
+    $('#end-note').textContent = end.note || '';
+    $('#btn-nextday').hidden = true;
+    Sound.ambient(end.final === 'true' ? ['morning'] : ['drone']);
+    setTimeout(() => { el.end.hidden = false; }, 1600);
   }
 
   // ---------------------------------------------------------------- phone
@@ -861,7 +892,7 @@
     }
     let nextAt = Date.now() + 25000;
     setInterval(() => {
-      if (!started || !S || !S.flags.herAwake) return;
+      if (!started || !S || !S.flags.herAwake || S.node === 'end_true') return;
       if (!st.active) { st.active = true; st.lastAt = Date.now(); saveMem(); }
       if (!S.flags.herFirst) { S.flags.herFirst = true; nextAt = Date.now() + 9000 + Math.random() * 6000; }
       if (Date.now() - (st.decayAt || 0) > 40000) {           // ignoring her, slowly, works
@@ -882,7 +913,7 @@
     }, 1000);
 
     // While you were away, she kept writing. One every twenty minutes or so, up to sixty.
-    if (st.active && st.lastAt) {
+    if (st.active && st.lastAt && mem.lastEnding !== 'true') {
       const gap = Date.now() - st.lastAt, every = 20 * 60000;
       const n = Math.min(60, Math.floor(gap / every));
       for (let k = 1; k <= n; k++) {
@@ -1237,6 +1268,7 @@
     begin(Object.assign(newState(), save));
   });
   $('#btn-totitle').addEventListener('click', showTitle);
+  $('#btn-nextday').addEventListener('click', () => { const a = store.get(SAVE_KEY); if (a) begin(Object.assign(newState(), a)); });
 
   showTitle();
 })();

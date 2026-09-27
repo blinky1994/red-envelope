@@ -8,7 +8,7 @@ Every time you refuse the marriage, someone in your family disappears. Nobody el
 
 **▶ Play it: https://blinky1994.github.io/red-envelope/**
 
-> **Status:** Day One of seven is playable.
+> **Status:** complete. Seven days, three endings. Some of them need you to remember.
 
 ## Play
 

@@ -147,10 +147,18 @@
   </div>
 
   <div id="endscreen" class="screen" hidden>
-    <div class="end-kicker">第一日 · Day One</div>
+    <div class="end-kicker" id="end-kicker">第一日 · Day One</div>
     <div id="end-card" class="invite"></div>
+    <div id="end-final" hidden>
+      <div class="end-cn" id="final-cn"></div>
+      <div class="end-en" id="final-en"></div>
+      <div class="end-tail" id="final-count"></div>
+    </div>
     <div class="end-note" id="end-note"></div>
-    <div class="menu"><button class="menu-btn" id="btn-totitle">Return</button></div>
+    <div class="menu">
+      <button class="menu-btn" id="btn-nextday" hidden>Continue</button>
+      <button class="menu-btn" id="btn-totitle">Return to title</button>
+    </div>
   </div>
 
   <div id="toast" hidden></div>

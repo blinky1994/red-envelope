@@ -362,6 +362,83 @@ window.ART = (() => {
       ${prints}`, { wobble: 4 });
   }
 
+  // ---------------- the village temple: walls black with a century of incense
+  function templeFar() {
+    const coils = [260, 520, 800, 1080, 1340].map((x, i) => `<g transform="translate(${x} ${60 + (i % 2) * 30})" stroke="#6a4a2a" stroke-width="3" fill="none" opacity=".7">
+      <line x1="0" y1="-60" x2="0" y2="0"/><ellipse cx="0" cy="10" rx="18" ry="5"/><ellipse cx="0" cy="24" rx="30" ry="8"/><ellipse cx="0" cy="40" rx="42" ry="11"/><ellipse cx="0" cy="58" rx="54" ry="14"/>
+      <circle cx="0" cy="72" r="3" fill="#ff6a2a" stroke="none"/></g>`).join('');
+    return layer(0.05, `
+      <rect width="${W}" height="${H}" fill="url(#tpWall)"/>
+      <rect x="120" y="0" width="70" height="${H}" fill="#5a0c0c"/><rect x="1410" y="0" width="70" height="${H}" fill="#5a0c0c"/>
+      <g stroke="#b8913a" stroke-width="4" opacity=".6"><line x1="120" y1="200" x2="190" y2="200"/><line x1="1410" y1="200" x2="1480" y2="200"/></g>
+      ${coils}
+      <rect x="560" y="200" width="480" height="420" fill="#140604" stroke="#6a4a1a" stroke-width="6"/>
+      <path d="M800 250 C740 250 730 330 740 360 C700 380 690 470 700 560 L900 560 C910 470 900 380 860 360 C870 330 860 250 800 250Z" fill="#2a1c0c"/>
+      <ellipse cx="800" cy="300" rx="44" ry="50" fill="#6a5018"/>
+      <path d="M760 440 Q800 470 840 440" stroke="#8a6a20" stroke-width="5" fill="none"/>
+      <rect y="620" width="${W}" height="280" fill="#0a0503"/>`,
+      { wobble: 3, defs: `<linearGradient id="tpWall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c0806"/><stop offset="1" stop-color="#1a0e08"/></linearGradient>` });
+  }
+  function templeMid() {
+    const candles = [600, 650, 700, 900, 950, 1000].map(x => `<rect x="${x}" y="560" width="12" height="44" fill="#a31212"/><ellipse cx="${x + 6}" cy="552" rx="4" ry="9" fill="#ffd27a"/>`).join('');
+    return layer(0.25, `
+      <rect x="520" y="604" width="560" height="40" fill="#3a1a0a"/>
+      <rect x="540" y="644" width="520" height="200" fill="#5a0a0a"/>
+      <text x="800" y="760" text-anchor="middle" font-family="Noto Serif TC, serif" font-weight="900" font-size="64" fill="#b8913a" opacity=".7">有求必應</text>
+      ${candles}
+      <path d="M790 560 C770 520 820 490 790 450 C765 415 810 380 790 340" stroke="#ccc" stroke-opacity=".12" stroke-width="7" fill="none"/>
+      <ellipse cx="300" cy="120" rx="46" ry="58" fill="#8a0e12"/><ellipse cx="1300" cy="120" rx="46" ry="58" fill="#8a0e12"/>`);
+  }
+
+  // ---------------- the Lin house: empty for twenty years, except the altar
+  function linFar() {
+    return layer(0.05, `
+      <rect width="${W}" height="${H}" fill="url(#lnWall)"/>
+      <path d="M0 110 L1600 90 L1600 130 L0 150Z" fill="#0c0a09"/>
+      <path d="M980 0 L1180 0 L1080 140 L940 120Z" fill="#101418"/>
+      <polygon points="1000,120 1120,140 1300,900 820,900" fill="#9fb4d0" opacity=".06"/>
+      <path d="M1020 130 L1060 900 M1090 140 L1180 900" stroke="#c8d4e0" stroke-opacity=".05" stroke-width="30"/>
+      <g stroke="#3a3632" stroke-width="1.5" fill="none" opacity=".5"><path d="M0 150 Q80 200 160 150 M40 150 L80 230 M120 150 L80 230"/><path d="M1600 130 Q1520 190 1440 130 M1560 130 L1520 210 M1480 130 L1520 210"/></g>
+      <rect x="170" y="230" width="250" height="360" fill="#0a0908" stroke="#24201c" stroke-width="10"/>
+      <rect y="700" width="${W}" height="200" fill="#0c0b0a"/>`,
+      { wobble: 4, defs: `<linearGradient id="lnWall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a1a1c"/><stop offset="1" stop-color="#0e0d0c"/></linearGradient>` });
+  }
+  function linMid() {
+    const tabs = [690, 770, 850].map(x => `<rect x="${x}" y="300" width="56" height="170" fill="#300c08" stroke="#8a6a2a" stroke-width="3"/><line x1="${x + 28}" y1="325" x2="${x + 28}" y2="445" stroke="#9a7a32" stroke-width="4" stroke-dasharray="12 9"/>`).join('');
+    return layer(0.22, `
+      <rect x="620" y="250" width="380" height="260" fill="#160908" stroke="#4a2810" stroke-width="5"/>
+      ${tabs}
+      <rect x="600" y="510" width="420" height="30" fill="#2a1408"/>
+      <rect x="800" y="470" width="10" height="40" fill="#a31212"/><ellipse cx="805" cy="463" rx="4" ry="8" fill="#ffd27a"/>
+      <g transform="translate(1180 520)">
+        <path d="M0 180 L0 70 L90 10 L180 70 L180 180Z" fill="#6a2a2a" stroke="#15100d" stroke-width="3" opacity=".8"/>
+        <rect x="60" y="100" width="60" height="80" fill="#c9a24a" opacity=".5"/>
+        <path d="M-10 70 L90 0 L190 70" stroke="#c9a24a" stroke-width="5" fill="none" opacity=".6"/>
+      </g>
+      <g transform="translate(1380 600)"><rect x="0" y="40" width="150" height="70" rx="10" fill="#2a4a6a" opacity=".7" stroke="#15100d" stroke-width="3"/><circle cx="30" cy="112" r="16" fill="#111"/><circle cx="120" cy="112" r="16" fill="#111"/><rect x="30" y="10" width="90" height="36" fill="#3a5a7a" opacity=".7"/></g>
+      ${servant(1300, 560, 1.2, '#4a6a3a', true)}`);
+  }
+
+  // ---------------- the reservoir: the moon is in the water, and not in the sky
+  function resFar() {
+    const r = rng(41);
+    let reeds = '';
+    for (let i = 0; i < 70; i++) { const x = r() * W, h = 60 + r() * 140; reeds += `M${f1(x)} 900 Q${f1(x + (r() - .5) * 20)} ${f1(900 - h * .6)} ${f1(x + (r() - .5) * 40)} ${f1(900 - h)}`; }
+    return layer(0.05, `
+      <rect width="${W}" height="${H}" fill="url(#rsSky)"/>
+      <path d="M0 380 L200 330 L420 360 L700 300 L980 350 L1250 310 L1600 350 L1600 460 L0 460Z" fill="#070b0f"/>
+      <rect y="440" width="${W}" height="460" fill="url(#rsWater)"/>
+      <ellipse cx="980" cy="610" rx="70" ry="18" fill="#dfe6ea" opacity=".85"/>
+      <g stroke="#dfe6ea" stroke-opacity=".25" stroke-width="3">${[640, 660, 684, 712].map((y, i) => `<line x1="${900 - i * 30}" y1="${y}" x2="${1060 + i * 30}" y2="${y}"/>`).join('')}</g>
+      <rect x="120" y="400" width="260" height="70" fill="#1a1e22" stroke="#0a0c0e" stroke-width="4"/>
+      <rect x="150" y="470" width="30" height="120" fill="#14181c"/><rect x="320" y="470" width="30" height="120" fill="#14181c"/>
+      <g transform="translate(1320 520)"><rect x="-6" y="0" width="12" height="180" fill="#1a1e22"/><rect x="-80" y="-60" width="160" height="70" fill="#c8c0b0" opacity=".35"/>
+        <text x="0" y="-12" text-anchor="middle" font-family="Noto Serif TC, serif" font-weight="900" font-size="34" fill="#8a1a1a" opacity=".5">禁止游泳</text></g>
+      <path d="${reeds}" stroke="#05080a" stroke-width="4" fill="none"/>`,
+      { wobble: 4, defs: `<linearGradient id="rsSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#020305"/><stop offset="1" stop-color="#0a1016"/></linearGradient>
+        <linearGradient id="rsWater" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c141a"/><stop offset="1" stop-color="#04070a"/></linearGradient>` });
+  }
+
   const SCENES = {
     black: () => ({ layers: [layer(0, `<rect width="${W}" height="${H}" fill="#000"/>`, { wobble: 0 })], lights: [], dark: 0, fog: null, grade: 'none', charLight: 0 }),
 
@@ -428,6 +505,38 @@ window.ART = (() => {
       ],
       dark: 0.88, grade: 'night', charLight: 0,
       fog: { c: '100,115,135', a: 0.2, y0: 600, y1: 900 },
+    }),
+
+    temple: () => ({
+      layers: [templeFar(), templeMid()],
+      lights: [
+        { x: 800, y: 560, r: 0.4, c: '255,150,70', i: 0.85, fl: 'candle', depth: 0.25 },
+        { x: 300, y: 120, r: 0.22, c: '255,70,50', i: 0.6, fl: 'lantern', depth: 0.25 },
+        { x: 1300, y: 120, r: 0.22, c: '255,70,50', i: 0.6, fl: 'lantern', depth: 0.25 },
+        { x: 800, y: 300, r: 0.25, c: '230,190,110', i: 0.45, fl: 'steady', depth: 0.05 },
+      ],
+      dark: 0.8, grade: 'warm', charLight: 0.35,
+      fog: { c: '120,100,90', a: 0.14, y0: 100, y1: 600 },
+    }),
+
+    linhouse: () => ({
+      layers: [linFar(), linMid()],
+      lights: [
+        { x: 1060, y: 520, r: 0.4, c: '160,180,210', i: 0.6, fl: 'steady', depth: 0.05 },
+        { x: 805, y: 460, r: 0.2, c: '255,160,80', i: 0.7, fl: 'candle', depth: 0.22 },
+      ],
+      dark: 0.9, grade: 'night', charLight: 0.3,
+      fog: { c: '110,110,115', a: 0.16, y0: 300, y1: 900 },
+    }),
+
+    reservoir: () => ({
+      layers: [resFar()],
+      lights: [
+        { x: 980, y: 620, r: 0.3, c: '210,225,235', i: 0.7, fl: 'steady', depth: 0.05 },
+        { x: 800, y: 700, r: 0.5, c: '120,140,160', i: 0.3, fl: 'dying', depth: 0.05 },
+      ],
+      dark: 0.9, grade: 'night', charLight: 0.4,
+      fog: { c: '120,135,150', a: 0.3, y0: 420, y1: 760 },
     }),
 
     hall: () => ({
@@ -649,8 +758,35 @@ window.ART = (() => {
     <rect x="132" y="500" width="136" height="14" fill="#2a1a10" stroke="${INK}" stroke-width="1.5"/>
     <rect x="132" y="580" width="136" height="14" fill="#2a1a10" stroke="${INK}" stroke-width="1.5"/>`);
 
+  function keeper() {
+    const tone = '#d4b89a';
+    return svgChar('kp', '0 0 400 800', '', `<g transform="translate(20 90) scale(.92)">
+      ${livingNeck(tone)}
+      ${body('#6a6254', '#3a342a', `<path d="M92 436 L150 436 L140 800 L78 800Z M308 436 L250 436 L260 800 L322 800Z" fill="#8a8272"/>`)}
+      <ellipse cx="60" cy="705" rx="16" ry="12" fill="${tone}" stroke="${INK}" stroke-width="2"/><ellipse cx="340" cy="705" rx="16" ry="12" fill="${tone}" stroke="${INK}" stroke-width="2"/>
+      ${livingFace(tone)}
+      <path d="M150 180 C160 150 240 150 250 180" stroke="#cfcac0" stroke-width="10" fill="none"/>
+      <path d="M160 236 q8 5 16 0 M224 236 q8 5 16 0 M176 250 q24 10 48 0" stroke="#8a6a52" stroke-width="2" fill="none" opacity=".7"/>
+    </g>`);
+  }
+  // The matchmaker is paper: a red flower in her hair, a fan, a painted smile.
+  function matchmaker() {
+    return svgChar('mk', '0 0 400 800', '', `<g transform="translate(20 110) scale(.9)">
+      ${bambooNeck}
+      ${body('#3a2a5a', '#d8b454', `<path d="M92 436 L308 436 L322 800 L78 800Z" fill="url(#mkP)"/>`)}
+      <rect x="78" y="560" width="244" height="240" fill="url(#mkwet)"/>
+      <ellipse cx="60" cy="705" rx="15" ry="12" fill="#d8d0d8" stroke="${INK}" stroke-width="2"/>
+      <g transform="translate(330 640) rotate(-20)"><path d="M0 0 L-50 -90 A100 100 0 0 1 50 -90Z" fill="#c9a24a" stroke="${INK}" stroke-width="2"/><path d="M0 0 L-25 -95 M0 0 L0 -100 M0 0 L25 -95" stroke="#8a6a1a" stroke-width="2"/></g>
+      ${effigyFace(14, 0)}
+      <path d="M142 214 C136 146 264 146 258 214 C246 180 154 180 142 214Z" fill="#0b0b0e" stroke="${INK}" stroke-width="3"/>
+      <circle cx="200" cy="138" r="26" fill="#0b0b0e"/>
+      <g transform="translate(250 160)"><circle r="18" fill="#e0203a"/><circle r="8" fill="#ffd27a"/></g>
+      <circle cx="160" cy="262" r="6" fill="#15100d"/>
+    </g>`).replace('<defs>', '<defs><pattern id="mkP" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="6" fill="#d8b454" opacity=".35"/></pattern>');
+  }
+
   const CHARS = {
-    mom, ama, wen,
+    mom, ama, wen, keeper, matchmaker,
     seat_mom: seat, seat_ama: seat, seat_wen: seat,
     men: () => svgChar('mn', '0 0 1100 800', '',
       brother(0, 40, 0.95, -4, [100, 480]) + brother(700, 30, 0.97, 12, [250, 560]) + brother(350, 0, 1, -2, [60, 600]), 4),
@@ -693,7 +829,30 @@ window.ART = (() => {
     <linearGradient id="phSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e0b070"/><stop offset="1" stop-color="#c89a68"/></linearGradient>
     <radialGradient id="phAge" cx=".5" cy=".5" r=".75"><stop offset=".55" stop-color="#6a3a10" stop-opacity="0"/><stop offset="1" stop-color="#6a3a10" stop-opacity=".45"/></radialGradient>`);
 
+  // The other half: her, with your hand cut away at the wrist.
+  const photoHalf = () => itemSvg('0 0 520 420', `
+    <g transform="rotate(3 260 210)">
+      <rect x="20" y="20" width="480" height="380" fill="#e8dcc0"/>
+      <rect x="44" y="44" width="432" height="300" fill="#dfae6e"/>
+      <rect x="44" y="200" width="432" height="144" fill="#6e7a70" opacity=".8"/>
+      <path d="M44 44 L258 44 L262 60 L256 78 L263 96 L257 114 L264 132 L258 150 L264 168 L257 186 L263 204 L258 222 L264 240 L259 256 L262 344 L44 344Z" fill="#2a2018"/>
+      <g transform="translate(360 150)">
+        <ellipse cx="0" cy="40" rx="28" ry="34" fill="#d8b294"/>
+        <path d="M-30 30 C-30 -6 30 -6 30 30 C20 12 -20 12 -30 30Z" fill="#1a120c"/>
+        <path d="M-10 44 q10 5 20 0" stroke="#5a3020" stroke-width="2" fill="none"/>
+        <path d="M-46 190 L-36 88 C-30 76 30 76 36 88 L46 190Z" fill="#b3121b"/>
+        <path d="M-34 100 C-60 120 -80 130 -96 128" stroke="#d8b294" stroke-width="13" fill="none" stroke-linecap="round"/>
+      </g>
+      <path d="M266 270 C272 260 286 260 292 268 C298 278 292 290 280 292 L266 290Z" fill="#dcb494" stroke="#1a120c" stroke-width="1.5"/>
+      <rect x="20" y="20" width="480" height="380" fill="url(#phAge2)"/>
+    </g>`, `<radialGradient id="phAge2" cx=".5" cy=".5" r=".75"><stop offset=".55" stop-color="#6a3a10" stop-opacity="0"/><stop offset="1" stop-color="#6a3a10" stop-opacity=".45"/></radialGradient>`);
+
   const ITEMS = {
+    photo_half: photoHalf,
+    photo_whole: () => itemSvg('0 0 900 420', `<g transform="translate(-20 0)">${photo(false).replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g><g transform="translate(400 0)">${photoHalf().replace(/^<svg[^>]*>|<\/svg>$/g, '')}</g>`),
+    moonblocks: () => itemSvg('0 0 400 260', `
+      <g transform="rotate(-18 130 130)"><path d="M40 130 C40 50 220 50 220 130 C190 110 70 110 40 130Z" fill="#a3121a" stroke="#4a0508" stroke-width="3"/><path d="M40 130 C70 150 190 150 220 130" fill="#6e0a10"/></g>
+      <g transform="rotate(14 280 150)"><path d="M180 150 C180 70 360 70 360 150 C330 130 210 130 180 150Z" fill="#a3121a" stroke="#4a0508" stroke-width="3"/><path d="M180 150 C210 170 330 170 360 150" fill="#6e0a10"/></g>`),
     envelope: () => itemSvg('0 0 500 340', `
       <g transform="rotate(-4 250 170)">
         <rect x="30" y="30" width="440" height="280" rx="6" fill="#a3121a"/>
