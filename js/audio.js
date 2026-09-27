@@ -610,6 +610,15 @@ window.Sound = (() => {
       for (let k = 0; k < 8; k++) b.g.gain.setValueAtTime(Math.random() < 0.5 ? 0.3 : 1, t + k * 0.05);
       thump(t, 90, 40, 0.4, 0.9);
     },
+    lap(t, o = {}) { // water lapping at something: a step, a wall. Close.
+      const b = placed({ dist: 0.35, ...o }, 0.5);
+      for (let k = 0; k < 4; k++) {
+        const s = t + k * (0.9 + Math.random() * 0.6);
+        const r = burst(s, 0.7, 0.45, 'lowpass', 500 + Math.random() * 400, 1.2, b);
+        r.g.gain.setValueAtTime(0.0001, s); r.g.gain.exponentialRampToValueAtTime(0.45, s + 0.18); r.g.gain.exponentialRampToValueAtTime(0.0001, s + 0.7);
+        tone(300 + Math.random() * 200, s + 0.25, 0.05, 0.05, 'sine', b);
+      }
+    },
     beep(t) { // a phone camera finding focus
       tone(2700, t, 0.035, 0.08, 'sine'); tone(2700, t + 0.09, 0.035, 0.08, 'sine');
     },
@@ -633,7 +642,34 @@ window.Sound = (() => {
   function toggleMute() { muted = !muted; applyLevel(); return muted; }
   function setVolume(v) { volume = Math.min(1, Math.max(0, v)); applyLevel(); }
 
+  // The undertow: a low pressure under every scene, rising day by day as the
+  // wedding (and the water) comes closer. It is never mentioned. When it
+  // suddenly stops, you notice.
+  let under = null;
+  function setUndertow(levelTo) {
+    if (!ctx) return;
+    if (!under) {
+      const out = ctx.createGain(); out.gain.value = 0;
+      const lp = filter('lowpass', 110, 0.8);
+      const a = ctx.createOscillator(); a.frequency.value = 33;
+      const b = ctx.createOscillator(); b.frequency.value = 49.4;
+      const c = ctx.createOscillator(); c.type = 'triangle'; c.frequency.value = 66.3;
+      const cg = ctx.createGain(); cg.gain.value = 0.25;
+      const n = noise(); const ng = ctx.createGain(); ng.gain.value = 0.6;
+      n.connect(filter('lowpass', 80)).connect(ng).connect(lp);
+      a.connect(lp); b.connect(lp); c.connect(cg).connect(lp);
+      const swell = ctx.createGain(); swell.gain.value = 0.75;
+      const lfo = ctx.createOscillator(); lfo.frequency.value = 0.06;
+      const lg = ctx.createGain(); lg.gain.value = 0.25;
+      lfo.connect(lg).connect(swell.gain);
+      lp.connect(swell).connect(out).connect(master);
+      [a, b, c, lfo].forEach(o => o.start()); n.start();
+      under = out;
+    }
+    under.gain.setTargetAtTime(levelTo, ctx.currentTime, levelTo > under.gain.value ? 2.5 : 0.25);
+  }
+
   const current = () => Object.keys(active);
 
-  return { init, ambient, current, sfx, toggleMute, setVolume, getVolume: () => volume, isMuted: () => muted };
+  return { init, ambient, current, sfx, setUndertow, toggleMute, setVolume, getVolume: () => volume, isMuted: () => muted };
 })();

@@ -534,7 +534,7 @@ const STORY = {
       { slow: true, t: 'It runs through the gap under the window frame, and into your room.' },
       { beat: 1200 },
       'You look down at your own hand.',
-      { fx: 'red', slow: true, t: 'Red thread. Knotted tight around your little finger. The knot is still wet.' },
+      { fx: ['red', 'twitch'], do: s => { s.flags.threadTied = true; }, slow: true, t: 'Red thread. Knotted tight around your little finger. The knot is still wet.' },
       { if: s => got(s, 'charm'), who: 'bride', sfx: { n: 'whisper', pan: 0, dist: 0.1 }, t: 'Your grandmother always did like to get in the way.' },
       { if: () => her().attention() >= 8, who: 'bride', t: 'You always look when I write to you. You never looked at me like that when we were small.' },
       { if: () => her().attention() < 8 && her().unread() >= 5, who: 'bride', t: "You didn't read my messages." },
@@ -619,7 +619,7 @@ const STORY = {
       { sfx: { n: 'breath', pan: 0, dist: 0.05 }, t: 'Through the blanket, very close, something breathes. In. Out. The way children breathe when they are trying very hard to be quiet.' },
       { t: 'The end of the mattress sinks. Someone is sitting at the foot of your bed. Someone light. Someone small.' },
       { slow: true, t: 'Cold, wet fingers slide under the blanket and find your hand.' },
-      'They tie something around your little finger. Carefully. Lovingly. The way you tie a thread when you are seven and playing at weddings.',
+      { do: s => { s.flags.threadTied = true; }, fx: 'twitch', t: 'They tie something around your little finger. Carefully. Lovingly. The way you tie a thread when you are seven and playing at weddings.' },
       { who: 'bride', sfx: { n: 'whisper', pan: 0, dist: 0.05 }, slow: true, t: "There. Now you won't get lost." },
       { who: 'bride', slow: true, t: "And you can't let go again." },
     ],
@@ -630,7 +630,7 @@ const STORY = {
   morning: {
     bg: 'black', rain: false, chars: [], item: null, ambient: [],
     lines: [
-      { do: collect, beat: 2000 },
+      { do: s => { collect(s); s.flags.threadTied = true; }, beat: 2000 },
       { ambient: ['room', 'morning'], t: 'You wake up. Birds. Grey light.' },
       { slow: true, t: 'You are not in your bed.' },
       { fx: 'flicker', bg: 'hall', t: "You're standing in the ancestral hall, barefoot, in front of the altar." },
@@ -681,6 +681,7 @@ const STORY = {
 // (saying sorry). Remembering unlocks the only ending where anyone is forgiven.
 // ============================================================================
 Object.assign(SPEAKERS, {
+  radio:      { name: 'Radio', cls: 'radio' },
   keeper:     { name: 'The Temple Keeper' },
   matchmaker: { name: 'The Matchmaker', cls: 'whisper' },
 });
@@ -708,6 +709,9 @@ Object.assign(STORY, {
       { if: s => has(s, 'ama'), t: 'Ama sits in the back, holding her handbag on her knees like a shield. Every time you pass the reservoir sign, her lips move.' },
       { if: s => has(s, 'wen'), t: 'Xiao-Wen stayed home. She said she was tired. She had gold paper under her fingernails.' },
       'Your little finger is still purple. You keep that hand in your pocket, next to the envelope. The envelope is warm. Your hand is not.',
+      { sfx: 'radio', t: 'Somewhere past the reservoir sign, the radio turns itself on. A newsreader, very calm.' },
+      { who: 'radio', t: '...rose four centimetres overnight. The water bureau says there was no rain upstream, and no explanation. In other news\u2014' },
+      { do: herText('six'), t: 'Nobody reaches over to turn it off.' },
     ],
     go: 'temple',
   },
@@ -877,6 +881,10 @@ Object.assign(STORY, {
       { if: s => has(s, 'wen'), who: 'wen', t: 'I dreamt I was sewing all night, Ge. Little red clothes. My fingers hurt.' },
       { if: s => has(s, 'wen'), t: 'Her fingertips are pricked all over, tiny red dots, like she really was.' },
       { if: s => s.family.length === 0, t: 'There is nobody to ask who put them there. There is nobody in the house but you.' },
+      { sfx: 'radio', who: 'radio', t: '...rose another eleven centimetres. Residents are asked not to go near the reservoir, particularly during the seventh month.' },
+      { if: s => has(s, 'mom'), who: 'mom', t: 'The frogs came right up to the doorstep last night. Hundreds of them. I’ve never seen them come up so far from the fields.' },
+      { if: s => has(s, 'mom'), t: 'She says it the way people talk about the weather. You look at the doorstep. It is wet.' },
+      { do: herText('five days. i can\u2019t sleep either'), t: 'Your phone buzzes in your pocket. You leave it there.' },
       { chars: [], t: 'In the afternoon, you climb the hill to the Lin house.' },
     ],
     go: 'linhouse',
@@ -1045,6 +1053,13 @@ Object.assign(STORY, {
     bg: 'bedroom', rain: false, chars: [], item: null, ambient: ['night', 'clock'],
     lines: [
       { do: s => { s.day = 4; }, big: '四日', sub: 'Four days.' },
+      { bg: 'house', chars: familyOnScreen, ambient: ['room', 'clock'], sfx: 'radio', who: 'radio', t: '...the water bureau opened the sluice gates at two o’clock this afternoon. The reservoir has continued to rise. Engineers are unable to\u2014' },
+      { if: s => has(s, 'mom'), t: 'Mom spends the afternoon ironing a red shirt you have never seen before.' },
+      { if: s => has(s, 'mom'), who: 'you', t: 'Whose is that?' },
+      { if: s => has(s, 'mom'), who: 'mom', t: 'Yours. For Saturday.' },
+      { if: s => has(s, 'mom'), slow: true, t: 'Then she looks down at the shirt in her hands, and you watch her not know what she meant.' },
+      { chars: [], t: 'Next door, the Chens are tying everything they own onto the back of a scooter. They don’t say where they’re going. They don’t look at your house.' },
+      { bg: 'bedroom', ambient: ['night', 'clock'], do: herText('four'), t: 'As the sun goes down, your phone buzzes once in your pocket. One word. You don’t take it out.' },
       { if: s => s.flags.remembered, t: 'You don’t sleep. Every time you close your eyes you are six years old, and the water is warm on top and cold underneath.' },
       'The frogs are singing. You tell yourself that means something. You tell yourself that until it’s almost midnight.',
       { do: herText('i’m in the house'), sfx: 'buzz', t: 'Your phone lights up on the nightstand.' },
@@ -1139,7 +1154,57 @@ Object.assign(STORY, {
       { if: s => has(s, 'wen') && got(s, 'ingot'), who: 'wen', t: 'Ge. I folded another one. For the other one.' },
       { if: s => has(s, 'wen') && got(s, 'ingot'), who: 'you', t: 'What other one?' },
       { if: s => has(s, 'wen') && got(s, 'ingot'), who: 'wen', slow: true, t: 'The girl who sits at the end of the table. She never gets anything.' },
-      { if: s => has(s, 'mom'), t: 'All day, Mom sits beside you and holds your wrist, the one with the ring of bruise, as if she is taking your pulse. She doesn’t know she’s doing it.' },
+      { sfx: 'radio', who: 'radio', t: '...the road past the reservoir is closed. Water is standing in the paddy fields on both sides of the village. The water bureau says it cannot tell us where it is coming from.' },
+      'You listen to it twice, the way you read a text message twice when you already know what it says.',
+      { do: herText('the water is almost at your door'), t: 'Every road out of this village runs past the reservoir. You never noticed that before.' },
+    ],
+    choices: [
+      { t: 'Try to leave the village', go: 'escape' },
+      { t: 'Stay', go: 'day5_evening' },
+    ],
+  },
+
+  // You try to leave. The village doesn't let you. Nothing is stopping you, exactly.
+  escape: {
+    bg: 'car', rain: false, chars: [], item: null, ambient: ['drone'],
+    lines: [
+      { do: s => { s.flags.triedEscape = true; }, t: 'You don’t pack. You just take the keys.' },
+      { if: s => has(s, 'mom'), t: 'Mom watches you from the doorway and doesn’t ask where you’re going. It is as if she already knows how this ends.' },
+      'You take the main road, fast, with the windows up. 水庫 — RESERVOIR, 2 KM.',
+      { beat: 1600 },
+      { slow: true, t: '水庫 — RESERVOIR, 1 KM.' },
+      'There is only one sign on this road. You have driven past it your whole life. It has never said one kilometre.',
+      { beat: 1400 },
+      { ambient: ['drone', 'sub'], t: 'Your headlights find the water before you do. The road runs down into it, black and flat, and doesn’t come up again.' },
+      'No current. No wind. The water is so still it looks like the road goes on, upside down, forever.',
+      { beat: 1800 },
+      { sfx: { n: 'suonaFar', pan: 0, dist: 0.7 }, slow: true, t: 'Out on the flooded road, a hundred metres ahead, the paper sedan chair is floating, upright, perfectly still.' },
+      'Its curtain is tied back. The seat inside is empty. It is waiting.',
+    ],
+    choices: [
+      { t: 'Drive through the water', go: 'escape_back', morph: { to: 'Turn back', go: 'escape_back', after: 1800 } },
+      { t: 'Turn back', go: 'escape_back' },
+    ],
+  },
+
+  escape_back: {
+    bg: 'car', rain: false, chars: [], item: null, ambient: ['drone'],
+    lines: [
+      { fx: 'twitch', t: 'Your hands turn the wheel. You watch them do it.' },
+      'You reverse all the way back to the village, the headlights full of water, the whole way.',
+      { sfx: { n: 'lap', pan: 0, dist: 0.3 }, slow: true, t: 'In the rearview mirror, the water follows you a little way up the road. Then it stops, the way a dog stops at the end of its chain.' },
+      'It doesn’t need to follow you. It knows where you live.',
+    ],
+    go: 'day5_evening',
+  },
+
+  day5_evening: {
+    bg: 'house', rain: false, chars: familyOnScreen, item: null, ambient: ['room', 'clock'],
+    lines: [
+      { if: s => s.family.length === 0 && s.flags.triedEscape, chars: [], t: 'The house is dark when you get back. You don’t turn the lights on.' },
+      { if: s => s.family.length === 0 && !s.flags.triedEscape, chars: [], t: 'You stay. The house gets dark around you, and you don’t turn the lights on.' },
+      { if: s => s.family.length > 0 && !s.flags.triedEscape, t: 'You stay. Somebody has to.' },
+      { if: s => has(s, 'mom'), t: 'All evening, Mom sits beside you and holds your wrist, the one with the ring of bruise, as if she is taking your pulse. She doesn’t know she’s doing it.' },
 
       // Ama's confession, if she's still here and you've started to find the truth
       { if: s => has(s, 'ama') && truthFound(s) > 0, chars: ['ama'], fx: 'dark', t: 'Late in the evening, Ama sits down across from you. She doesn’t turn on the light.' },
@@ -1157,7 +1222,12 @@ Object.assign(STORY, {
     bg: 'bedroom', rain: false, chars: [], item: null, ambient: ['night'],
     lines: [
       { do: s => { s.day = 2; }, big: '二日', sub: 'Two days.' },
-      'You fall asleep in the middle of the evening, all at once, as if something switched you off.',
+      { bg: 'courtyard', rain: false, ambient: ['drip'], sfx: 'radio', who: 'radio', t: '...fine and clear across the south tomorrow, with a light breeze in the evening. A lovely night for 七夕.' },
+      'The radio doesn’t mention the reservoir any more. The lane outside is ankle-deep in water that came from nowhere.',
+      'Half the houses on the lane are dark now. Nobody said goodbye.',
+      { sfx: { n: 'lap', pan: 0.2, dist: 0.3 }, slow: true, t: 'In the courtyard, standing in the water, someone has laid out a banquet table. Seven chairs. Seven bowls of rice. Chopsticks standing straight up in every one.' },
+      { if: s => s.family.length > 0, t: 'Nobody in the house mentions it. When you point, they look at the table the way you look at furniture.' },
+      { bg: 'bedroom', ambient: ['night'], do: herText('tomorrow'), t: 'You fall asleep in the middle of the evening, all at once, as if something switched you off.' },
       { fx: 'pitch', ambient: [], beat: 3000 },
       'You wake up in the dark.',
       { sfx: { n: 'dripNear' }, t: 'Something is dripping onto your pillow. Onto your cheek. Slow, cold drops, a few seconds apart.' },
@@ -1262,10 +1332,13 @@ Object.assign(STORY, {
       'Tonight the Cowherd and the Weaver Girl are allowed to meet across the river of stars, once a year, on a bridge of magpies. Everyone in Taiwan is thinking about lovers.',
       'It is also the birthday of 七娘媽, who watches over children until they turn sixteen. In Tainan, families take their sixteen-year-olds to her temple to thank her for getting them through.',
       { slow: true, t: 'Lin Qiu-Yue never turned sixteen.' },
+      { sfx: [{ n: 'radio' }, { n: 'suonaFar', pan: 0, dist: 0.35, delay: 0.6 }], t: 'All day, on every station, the radio plays the same thing: a suona, very close to the microphone.' },
+      { do: herText('i\u2019m wearing it now'), t: 'Your phone buzzes. You don’t need to read it. You read it anyway.' },
       { bg: 'bedroom', fx: 'dark', ambient: ['night'], beat: 2400 },
       { t: 'You don’t try to sleep. You sit on the edge of the bed in your clothes and wait.' },
       { ambient: [], big: '3:33' },
-      { fx: 'dark', t: 'The frogs stop.' },
+      { fx: ['dark', 'hush'], t: 'The frogs stop.' },
+      { slow: true, t: 'So does something else. A sound you have been hearing for six days, so low you stopped noticing it. It is gone, and the silence where it was is enormous.' },
       { beat: 2200 },
       { sfx: { n: 'suonaFar', pan: -0.7, dist: 1 }, t: 'The suona, far off, on the main road.' },
       { beat: 2400 },
@@ -1284,10 +1357,41 @@ Object.assign(STORY, {
       { who: 'eldest', sfx: { n: 'whisper', pan: 0, dist: 0.5 }, t: 'Son-in-law. It’s time.' },
       { fx: 'pitch-off', bg: 'courtyard', chars: ['men'], ambient: ['suona', 'drip'], t: 'You go down. You open the door. They are waiting in the courtyard in their wet suits, smiling, with a paper sedan chair behind them and the matchmaker bowing.' },
       { if: s => s.flags.seenEyes, who: 'matchmaker', t: 'Such good eyes. She’ll love them.' },
+      { who: 'eldest', t: 'Well, son-in-law?' },
+    ],
+    timer: { ms: 10000, go: 'procession' },
+    choices: [
+      { t: 'Refuse to go', go: 'procession_refused', morph: { to: 'Go with them', go: 'procession_taken', after: 1600 } },
+      { t: 'Go with them', go: 'procession' },
+    ],
+  },
+
+  procession_refused: {
+    bg: 'courtyard', rain: false, chars: ['men'], item: null, ambient: ['suona', 'drip'],
+    lines: [
+      { fx: 'twitch', t: '“I won’t go,” you say.' },
+      { slow: true, t: 'What comes out of your mouth is “I’ll go.”' },
+      { who: 'eldest', t: 'Good.' },
+    ],
+    go: 'procession',
+  },
+
+  procession_taken: {
+    bg: 'courtyard', rain: false, chars: ['men'], item: null, ambient: ['suona', 'drip'],
+    lines: [
+      { fx: 'twitch', slow: true, t: 'You hear yourself say it. You didn’t decide to.' },
+    ],
+    go: 'procession',
+  },
+
+  procession: {
+    bg: 'courtyard', rain: false, chars: ['men'], item: null, ambient: ['suona', 'drip'],
+    lines: [
       'They don’t take your arms. They don’t have to. The thread on your finger pulls, gently, down the road, towards the water.',
       { if: s => has(s, 'mom'), chars: [], t: 'Behind you, Mom is standing in the doorway in her nightgown. She doesn’t try to stop you. She raises one hand, the way you wave to someone leaving on a train.' },
       { if: s => !has(s, 'mom'), chars: [], t: 'Behind you the house is dark. There is nobody at the window. There is nobody to be at the window.' },
       { bg: 'road', sfx: { n: 'crinkle', pan: 0, dist: 0.3 }, t: 'You walk. Paper feet shuffle around you. You pass the little shrine with its bowl of soup, still steaming, twenty years later.' },
+      { sfx: { n: 'lap', pan: 0, dist: 0.2 }, slow: true, t: 'You don’t have to walk far. The water has come up to meet you. It is waiting at the end of the lane, where the road used to be.' },
     ],
     go: 'wedding',
   },
@@ -1295,8 +1399,8 @@ Object.assign(STORY, {
   wedding: {
     bg: 'reservoir', rain: false, chars: ['bride_far'], item: null, ambient: ['suona', 'sub'],
     lines: [
-      'They walk you down to the reservoir. The water is perfectly still, and the moon is in it again, and not in the sky.',
-      'At the edge of the water, a small red shape is waiting. You can’t see her face. The veil moves, though there is no wind.',
+      'You walk into the shallows, and then deeper, and the reservoir is all around you now, and the village is behind you, a long way off. The water is perfectly still. The moon is in it again, and not in the sky.',
+      'Out in the still water ahead of you, a small red shape is waiting. You can’t see her face. The veil moves, though there is no wind.',
       { who: 'bride', sfx: { n: 'whisper', pan: 0, dist: 0.5 }, t: 'You came.' },
       { if: s => s.flags.foundHalf, t: 'In your pocket, the two halves of the photograph are warm.' },
       { if: s => s.flags.played, t: 'Your palms still remember the game.' },
@@ -1308,13 +1412,15 @@ Object.assign(STORY, {
       { t: 'Take her hand', go: 'end_wedding' },
       { t: 'Give her someone else', go: 'end_substitute' },
       { t: 'Say her name. Bring her home.', if: s => s.flags.remembered && (s.flags.foundHalf || s.flags.apologized || s.flags.askedWho), go: 'end_true' },
+      { t: 'Run', go: 'end_wedding', do: s => { s.flags.ran = true; }, morph: { to: 'Take her hand', go: 'end_wedding', after: 2600 } },
     ],
   },
 
   end_wedding: {
     bg: 'reservoir', rain: false, chars: ['bride_far'], item: null, ambient: ['suona'],
     lines: [
-      { chars: [], t: 'You walk down to her. You take her hand. It is small, and cold, and it holds on so tight.' },
+      { if: s => s.flags.ran, fx: 'twitch', t: 'You turn to run. Your feet walk you down to her instead.' },
+      { chars: [], t: 'You take her hand. It is small, and cold, and it holds on so tight.' },
       { slow: true, t: 'This time, you don’t let go.' },
       { fx: 'pitch', ambient: ['sub'], sfx: { n: 'splash', pan: 0, dist: 0.2 }, t: 'You walk into the water together. It’s warm on top, and cold underneath, just as you remember.' },
       { beat: 3000 },
@@ -1362,7 +1468,7 @@ Object.assign(STORY, {
       { chars: [], fx: 'pitch', ambient: ['drip'], slow: true, t: 'In the dark, she lifts her veil herself. You don’t see it. You hear the paper fold back.' },
       { who: 'bride', t: 'You got so tall.' },
       'Her voice is just a little girl’s voice now. Nothing else in it.',
-      'She takes the red thread in both hands and unties it from her finger. Then, very carefully, from yours.',
+      { do: s => { s.flags.untied = true; }, t: 'She takes the red thread in both hands and unties it from her finger. Then, very carefully, from yours.' },
       { who: 'bride', t: 'Don’t let go of them, then.' },
       { beat: 2600 },
       { fx: 'pitch-off', bg: 'hall', ambient: ['room', 'morning'], do: s => { s.lost.forEach(k => { if (!s.family.includes(k)) s.family.push(k); }); s.lost = []; s.debt = 0; },

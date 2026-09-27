@@ -47,6 +47,9 @@ window.ART = (() => {
     return `<path d="${d}" stroke="${color}" stroke-width="${width}" fill="none" stroke-linecap="round"/>`;
   }
 
+  // How far the water has come: 0 on the first days, 6 on the wedding night.
+  const flood = st => (st && st.day != null ? Math.max(0, 6 - st.day) : 0);
+
   // ======================================================================
   // SCENES
   // ======================================================================
@@ -62,8 +65,8 @@ window.ART = (() => {
       { wobble: 3, defs: `<linearGradient id="rdSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#05080a"/><stop offset=".6" stop-color="#1a252b"/><stop offset="1" stop-color="#0b1013"/></linearGradient>` });
   }
 
-  function roadMid() {
-    const r = rng(11);
+  function roadMid(state) {
+    const r = rng(11), f = flood(state);
     let dashes = '', posts = '', sheen = '';
     for (let k = 0; k < 14; k += 2) {
       const u0 = (k / 14) ** 2, u1 = ((k + 1) / 14) ** 2;
@@ -92,6 +95,8 @@ window.ART = (() => {
       <path d="M760 505 L840 505 L1560 900 L40 900Z" fill="#1b2023"/>
       <g stroke="#c9c2a4" stroke-opacity=".16" stroke-width="3">${sheen}</g>
       <g fill="#8a7d46" opacity=".35">${dashes}</g>
+      ${f >= 3 ? `<path d="M680 ${505 - f * 4} L920 ${505 - f * 4} L${980 + f * 60} ${520 + f * 22} L${620 - f * 60} ${520 + f * 22}Z" fill="#0b141b"/>
+        <g stroke="#c9c2a4" stroke-opacity=".22" stroke-width="2">${[0, 1, 2, 3].map(i => `<line x1="${700 - i * 20 - f * 10}" y1="${512 + i * 6 + f * 3}" x2="${900 + i * 20 + f * 10}" y2="${512 + i * 6 + f * 3}"/>`).join('')}</g>` : ''}
       <path d="M1010 372 Q1095 400 1180 215 M1180 215 Q1320 260 1460 -130" stroke="#070a0c" stroke-width="2" fill="none"/>
       ${poles}
       <path d="M850 497 L1600 812 L1600 846 L850 503Z" fill="#3a4044"/>
@@ -217,7 +222,8 @@ window.ART = (() => {
   }
 
   // ---------------- your old bedroom
-  function bedroomFar() {
+  function bedroomFar(state) {
+    const f = flood(state);
     const r = rng(3);
     let bars = '', streaks = '';
     for (let x = 935; x < 1320; x += 35) bars += `<line x1="${x}" y1="160" x2="${x}" y2="540"/>`;
@@ -235,7 +241,9 @@ window.ART = (() => {
       <rect x="900" y="160" width="420" height="380" fill="none" stroke="#06080d" stroke-width="18"/>
       <rect x="120" y="180" width="130" height="180" fill="#1a2030" opacity=".6"/>
       <rect x="132" y="192" width="106" height="120" fill="#303a4a" opacity=".5"/>
-      <rect y="700" width="${W}" height="200" fill="#04050a"/>`,
+      <rect y="700" width="${W}" height="200" fill="#04050a"/>
+      ${f >= 4 ? `<rect y="${860 - (f - 4) * 30}" width="${W}" height="${40 + (f - 4) * 30}" fill="#0c1624" opacity=".85"/>
+        <polygon points="930,${866 - (f - 4) * 30} 1290,${866 - (f - 4) * 30} 1250,900 970,900" fill="#9fb4d0" opacity=".12"/>` : ''}`,
       { wobble: 3, defs: `<linearGradient id="bdWall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c111c"/><stop offset="1" stop-color="#05070d"/></linearGradient>
         <linearGradient id="bdPane" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a3a50"/><stop offset="1" stop-color="#0e1622"/></linearGradient>` });
   }
@@ -264,8 +272,8 @@ window.ART = (() => {
   }
 
   // ---------------- the courtyard, seen through your window
-  function courtyardFar() {
-    const r = rng(9);
+  function courtyardFar(state) {
+    const r = rng(9), f = flood(state);
     let tiles = '', puddles = '';
     for (let x = 0; x < W; x += 26) tiles += `<path d="M${x} 300 q13 -14 26 0"/>`;
     for (let i = 0; i < 14; i++) puddles += `<ellipse cx="${f1(r() * W)}" cy="${f1(660 + r() * 230)}" rx="${f1(40 + r() * 120)}" ry="${f1(5 + r() * 12)}"/>`;
@@ -280,7 +288,12 @@ window.ART = (() => {
       <ellipse cx="620" cy="380" rx="26" ry="34" fill="#3a080b"/>
       <ellipse cx="980" cy="380" rx="26" ry="34" fill="#3a080b"/>
       <rect y="630" width="${W}" height="270" fill="url(#cyGround)"/>
-      <g fill="#9ab0c8" opacity=".08">${puddles}</g>`,
+      <g fill="#9ab0c8" opacity="${f >= 2 ? 0.16 : 0.08}">${puddles}</g>
+      ${f >= 3 ? (() => { const y = 650 - (f - 3) * 40; return `<rect y="${y}" width="${W}" height="${900 - y}" fill="#1d2b38" opacity=".95"/>
+        <line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="#c8d8e8" stroke-opacity=".55" stroke-width="2.5"/>
+        <g stroke="#b0c4d8" stroke-opacity=".38" stroke-width="2">${Array.from({ length: 10 }, (_, i) => { const x = r() * W; return `<line x1="${x}" y1="${y + 12 + i * 16}" x2="${x + 60 + r() * 160}" y2="${y + 12 + i * 16}"/>`; }).join('')}</g>
+        <rect x="606" y="${y}" width="28" height="220" fill="#b0141c" opacity=".4"/><rect x="966" y="${y}" width="28" height="220" fill="#b0141c" opacity=".4"/>
+        <rect x="690" y="${y}" width="220" height="60" fill="#07090c" opacity=".6"/>`; })() : ''}`,
       { wobble: 4, defs: `<linearGradient id="cyGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#121820"/><stop offset="1" stop-color="#05070a"/></linearGradient>` });
   }
 
@@ -427,8 +440,8 @@ window.ART = (() => {
   }
 
   // ---------------- the reservoir: the moon is in the water, and not in the sky
-  function resFar() {
-    const r = rng(41);
+  function resFar(state) {
+    const r = rng(41), f = flood(state);
     let reeds = '';
     for (let i = 0; i < 70; i++) { const x = r() * W, h = 60 + r() * 140; reeds += `M${f1(x)} 900 Q${f1(x + (r() - .5) * 20)} ${f1(900 - h * .6)} ${f1(x + (r() - .5) * 40)} ${f1(900 - h)}`; }
     return layer(0.05, `
@@ -441,7 +454,9 @@ window.ART = (() => {
       <rect x="150" y="470" width="30" height="120" fill="#14181c"/><rect x="320" y="470" width="30" height="120" fill="#14181c"/>
       <g transform="translate(1320 520)"><rect x="-6" y="0" width="12" height="180" fill="#1a1e22"/><rect x="-80" y="-60" width="160" height="70" fill="#c8c0b0" opacity=".35"/>
         <text x="0" y="-12" text-anchor="middle" font-family="Noto Serif TC, serif" font-weight="900" font-size="34" fill="#8a1a1a" opacity=".5">禁止游泳</text></g>
-      <path d="${reeds}" stroke="#05080a" stroke-width="4" fill="none"/>`,
+      <path d="${reeds}" stroke="#05080a" stroke-width="4" fill="none"/>
+      ${f > 0 ? `<rect y="${720 - f * 42}" width="${W}" height="${180 + f * 42}" fill="#081016" opacity=".88"/>
+        <g stroke="#dfe6ea" stroke-opacity=".12" stroke-width="2">${Array.from({ length: 6 }, (_, i) => `<line x1="${200 + i * 170}" y1="${728 - f * 42 + i * 18}" x2="${340 + i * 170}" y2="${728 - f * 42 + i * 18}"/>`).join('')}</g>` : ''}`,
       { wobble: 4, defs: `<linearGradient id="rsSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#020305"/><stop offset="1" stop-color="#0a1016"/></linearGradient>
         <linearGradient id="rsWater" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c141a"/><stop offset="1" stop-color="#04070a"/></linearGradient>` });
   }
@@ -449,8 +464,8 @@ window.ART = (() => {
   const SCENES = {
     black: () => ({ layers: [layer(0, `<rect width="${W}" height="${H}" fill="#000"/>`, { wobble: 0 })], lights: [], dark: 0, fog: null, grade: 'none', charLight: 0 }),
 
-    road: () => ({
-      layers: [roadFar(), roadMid(), roadNear()],
+    road: state => ({
+      layers: [roadFar(), roadMid(state), roadNear()],
       lights: [
         { x: 800, y: 800, r: 0.36, c: '235,225,190', i: 0.95, fl: 'steady', depth: 0.25 },
         { x: 800, y: 590, r: 0.16, c: '200,205,190', i: 0.55, fl: 'steady', depth: 0.25 },
@@ -460,8 +475,8 @@ window.ART = (() => {
       fog: { c: '110,125,135', a: 0.2, y0: 380, y1: 620 },
     }),
 
-    car: () => ({
-      layers: [roadFar(), roadMid(), carInterior(false)],
+    car: state => ({
+      layers: [roadFar(), roadMid(state), carInterior(false)],
       lights: [
         { x: 800, y: 620, r: 0.3, c: '235,225,190', i: 0.9, fl: 'steady', depth: 0.25 },
         { x: 800, y: 740, r: 0.1, c: '80,200,140', i: 0.45, fl: 'steady', depth: 0 },
@@ -470,8 +485,8 @@ window.ART = (() => {
       fog: { c: '110,125,135', a: 0.18, y0: 400, y1: 600 },
     }),
 
-    car_env: () => {
-      const s = SCENES.car();
+    car_env: state => {
+      const s = SCENES.car(state);
       s.layers[2] = carInterior(true);
       s.lights.push({ x: 1040, y: 565, r: 0.12, c: '255,60,50', i: 0.55, fl: 'lantern', depth: 0 });
       return s;
@@ -495,14 +510,14 @@ window.ART = (() => {
       return s;
     },
 
-    bedroom: () => SCENES.bedroom_base(false),
-    bedroom_fingers: () => {
-      const sc = SCENES.bedroom_base(true);
+    bedroom: state => SCENES.bedroom_base(false, state),
+    bedroom_fingers: state => {
+      const sc = SCENES.bedroom_base(true, state);
       sc.lights.push({ x: 1400, y: 590, r: 0.06, c: '150,160,180', i: 0.35, fl: 'dying', depth: 0.2 });
       return sc;
     },
-    bedroom_base: fingers => ({
-      layers: [bedroomFar(), bedroomMid(fingers), bedroomNear()],
+    bedroom_base: (fingers, state) => ({
+      layers: [bedroomFar(state), bedroomMid(fingers), bedroomNear()],
       lights: [
         { x: 1110, y: 350, r: 0.42, c: '150,175,215', i: 0.75, fl: 'steady', depth: 0.05 },
         { x: 960, y: 760, r: 0.35, c: '150,175,215', i: 0.35, fl: 'steady', depth: 0.2 },
@@ -511,10 +526,11 @@ window.ART = (() => {
     }),
 
     courtyard: state => ({
-      layers: [courtyardFar(), windowFront(state)],
+      layers: [courtyardFar(state), windowFront(state)],
       lights: [
         { x: 800, y: 520, r: 0.4, c: '170,190,215', i: 0.6, fl: 'dying', depth: 0.1 },
         { x: 800, y: 150, r: 0.8, c: '90,110,140', i: 0.3, fl: 'steady', depth: 0.1 },
+        ...(flood(state) >= 3 ? [{ x: 800, y: 700, r: 0.5, c: '140,165,190', i: 0.4, fl: 'steady', depth: 0.1 }] : []),
       ],
       dark: 0.88, grade: 'night', charLight: 0,
       fog: { c: '100,115,135', a: 0.2, y0: 600, y1: 900 },
@@ -542,8 +558,8 @@ window.ART = (() => {
       fog: { c: '110,110,115', a: 0.16, y0: 300, y1: 900 },
     }),
 
-    reservoir: () => ({
-      layers: [resFar()],
+    reservoir: state => ({
+      layers: [resFar(state)],
       lights: [
         { x: 980, y: 620, r: 0.3, c: '210,225,235', i: 0.7, fl: 'steady', depth: 0.05 },
         { x: 800, y: 700, r: 0.5, c: '120,140,160', i: 0.3, fl: 'dying', depth: 0.05 },

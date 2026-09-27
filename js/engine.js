@@ -362,6 +362,8 @@
         case 'cam-face': $('#cam-face').innerHTML = ART.gonjiam(); pulseClass($('#cam-face'), 'show', 600000); Sound.sfx('jolt'); pulseClass(el.stage, 'shake', 600); break;
         case 'cam-off': el.stage.classList.remove('cam-on'); $('#cam').hidden = true; $('#cam-face').innerHTML = ''; break;
         case 'pitch-off': el.stage.classList.remove('pitch'); break;
+        case 'hush': hushed = true; Sound.setUndertow(0); break;       // the pressure you'd stopped noticing, gone
+        case 'twitch': twitchThread(); break;
         case 'subliminal': subliminal(); break;
         case 'chroma': pulseClass(el.scene, 'chroma', 700); break;
         case 'memory': pulseClass(el.scene, 'memory', 2000); pulseClass(el.memory, 'go', 2000); break;
@@ -369,7 +371,7 @@
     });
   }
 
-  const LASTING_FX = ['red', 'red-off', 'dark', 'darker', 'dark-off', 'pitch', 'pitch-off', 'cam', 'cam-off'];
+  const LASTING_FX = ['red', 'red-off', 'dark', 'darker', 'dark-off', 'pitch', 'pitch-off', 'cam', 'cam-off', 'hush'];
   function applyScene(o, silent = false) {
     if ('bg' in o) World.setScene(val(o.bg));
     if ('rain' in o) World.setRain(val(o.rain));
@@ -402,7 +404,26 @@
     el.phoneBadge.textContent = herN ? (herN > 99 ? '99+' : herN) : '';
     el.phoneBadge.classList.toggle('count', herN > 0);
     el.pocketBadge.hidden = !(S && pocketItems().length > (S.pocketSeen || 0));
+    el.countdown.dataset.day = S && S.day != null ? S.day : '';
+    updateThread();
+    Sound.setUndertow(started && !hushed ? undertowLevel() : 0);
   }
+
+  // The undertow grows with every day that passes; 'hush' cuts it dead.
+  let hushed = false;
+  const UNDERTOW = { 6: 0.03, 5: 0.05, 4: 0.08, 3: 0.11, 2: 0.15, 1: 0.18, 0: 0.22 };
+  const undertowLevel = () => (S && S.day != null ? UNDERTOW[S.day] ?? 0.03 : 0);
+
+  // The red thread: tied on the first night, slack at first, taut on the last.
+  function updateThread() {
+    const t = $('#thread');
+    const show = started && S && S.flags.threadTied && !S.flags.untied;
+    t.toggleAttribute('hidden', !show);   // an <svg>: .hidden does nothing, the attribute does
+    if (!show) return;
+    const sag = 20 + (S.day ?? 6) * 24;
+    $('#thread-path').setAttribute('d', `M-20 640 Q800 ${640 + sag} 1620 610`);
+  }
+  const twitchThread = () => pulseClass($('#thread'), 'twitch', 950);
 
   // ---------------------------------------------------------------- flow
   let nodeSnap = null;   // the state as this scene began: quick saves replay from here
@@ -421,6 +442,7 @@
     el.stage.classList.remove('dark', 'darker', 'pitch');
     $('#cam').hidden = true;
     el.stage.classList.remove('cam-on');
+    hushed = false;
     applyScene(node);
     updateHud();
     lineIdx = 0;
@@ -479,6 +501,7 @@
     if (style) el.text.classList.add(style);
     backlog.push({ whoKey: who, who: el.speaker.textContent, text: resolveText(text), cls: style || (sp ? sp.cls || '' : 'narr') });
     if (backlog.length > 120) backlog.shift();
+    if (who === 'bride') twitchThread();
     // Remember which lines have been read, so fast-forward knows where to stop.
     curKey = `${S.node}:${lineIdx - 1}`;
     curSeen = !!mem.seen[curKey];
@@ -577,9 +600,32 @@
       b.className = 'choice';
       b.textContent = val(c.t);
       b.style.animationDelay = `${i * 140}ms`;
+      let choice = c;
+      // morph: { to, go, after }. The words rewrite themselves, on a timer or
+      // the moment your cursor touches them. You don't get to choose this one.
+      if (c.morph) {
+        let done = false;
+        const run = () => {
+          if (done || !awaitingChoice) return;
+          done = true;
+          b.classList.add('morphing');
+          choice = { ...c, go: c.morph.go ?? c.go };
+          const from = b.textContent, to = c.morph.to;
+          let k = from.length, j = 0;
+          const del = setInterval(() => {
+            b.textContent = from.slice(0, --k);
+            if (k > 0) return;
+            clearInterval(del);
+            const add = setInterval(() => { b.textContent = to.slice(0, ++j); if (j >= to.length) clearInterval(add); }, 45);
+          }, 30);
+          twitchThread();
+        };
+        b.addEventListener('pointerenter', run);
+        setTimeout(run, c.morph.after ?? 2200);
+      }
       b.addEventListener('click', e => {
         e.stopPropagation();
-        pick(c);
+        pick(choice);
       });
       el.choices.appendChild(b);
     });
@@ -610,6 +656,8 @@
   function showTitle() {
     started = false;
     Sound.ambient([]);
+    Sound.setUndertow(0);
+    $('#thread').setAttribute('hidden', '');
     el.end.hidden = true;
     el.title.hidden = false;
     el.sidebar.hidden = true;
@@ -665,6 +713,8 @@
   const ENDINGS = ['wedding', 'substitute', 'true'];
   function showEnd(end = {}) {
     started = false;
+    Sound.setUndertow(0);
+    $('#thread').setAttribute('hidden', '');
     el.textbox.hidden = true;
     closeOverlays();
     setSkip(false);
@@ -1120,6 +1170,16 @@
       { id: 'drip', w: 1, ok: all(indoors, after('envelope')), run: () => Sound.sfx('dripNear') },
       { id: 'sag', w: 2, ok: inScene('house', 'house_watch', 'hall', 'bedroom'), run: () => World.sag() },
 
+      // the procession, somewhere out on the roads, a little closer each day
+      { id: 'procession', w: 3, ok: () => !!(S && S.day != null && S.day <= 5), run() {
+        Sound.sfx({ n: 'suonaFar', pan: Math.random() < 0.5 ? -0.8 : 0.8, dist: Math.min(1, 0.5 + S.day * 0.1) });
+        twitchThread();
+      } },
+      // the water, close by, where there shouldn't be any
+      { id: 'lapping', w: 2, ok: () => !!(S && S.day != null && S.day <= 4), run() {
+        Sound.sfx({ n: 'lap', pan: Math.random() * 1.4 - 0.7, dist: 0.2 + S.day * 0.1 });
+      } },
+
       // the living, all at once, stop looking at their food and look at you
       { id: 'glance', w: 3, ok: all(has('[data-k="mom"],[data-k="ama"],[data-k="wen"]'), after('envelope')), run() {
         const fam = [...el.chars.querySelectorAll('[data-k="mom"],[data-k="ama"],[data-k="wen"]')];
@@ -1168,6 +1228,7 @@
       if (S.flags.envelope) f *= 0.75;
       if (S.flags.night) f *= 0.7;
       f *= Math.pow(0.9, S.refusals || 0);
+      if (S.day != null) f *= 0.55 + 0.07 * S.day;   // day six: nearly as usual. The last day: twice as often.
       return f;
     }
     setInterval(() => {
