@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>紅包 · The Red Envelope</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<!-- Chromatic aberration: split the red and blue channels apart. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="chroma" color-interpolation-filters="sRGB">
+    <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r"/>
+    <feOffset in="r" dx="-7" result="r2"/>
+    <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g"/>
+    <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b"/>
+    <feOffset in="b" dx="7" result="b2"/>
+    <feBlend in="r2" in2="g" mode="screen" result="rg"/>
+    <feBlend in="rg" in2="b2" mode="screen"/>
+  </filter>
+</svg>
+<div id="stage">
+  <!-- Everything inside #scene lives in the world: it moves with the camera
+       and sits under the lighting pass. -->
+  <div id="scene" class="layer">
+    <div id="bg" class="layer"></div>
+    <div id="lurk" class="layer"></div>
+    <div id="chars" class="layer"></div>
+    <div id="front" class="layer"></div>
+    <canvas id="fog" class="layer"></canvas>
+    <div id="rain" class="layer"></div>
+    <canvas id="light" class="layer"></canvas>
+  </div>
+  <div id="item" class="layer"></div>
+  <div id="fx" class="layer"></div>
+  <div id="memory" class="layer"></div>
+  <div id="flash" class="layer"></div>
+  <canvas id="dust" class="layer"></canvas>
+  <div id="grain" class="layer"></div>
+  <div id="vignette" class="layer"></div>
+  <div id="big" class="layer"></div>
+
+  <div id="hud">
+    <div id="countdown" hidden>
+      <span class="num">七</span>
+      <span class="label">days until<br>the wedding</span>
+    </div>
+  </div>
+
+  <nav id="sidebar" hidden aria-label="Actions">
+    <button id="btn-phone" class="side-btn" title="Phone (P)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg>
+      <span class="side-label">Phone</span>
+      <span class="badge" hidden></span>
+    </button>
+    <button id="btn-pocket" class="side-btn" title="Pocket (I)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5h16v6a8 8 0 0 1-16 0z"/><path d="M8 5v4M16 5v4"/></svg>
+      <span class="side-label">Pocket</span>
+      <span class="badge" hidden></span>
+    </button>
+    <button id="btn-log" class="side-btn" title="Log (L)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l3 3v15H6z"/><path d="M9 10h6M9 14h6M9 18h4"/></svg>
+      <span class="side-label">Log</span>
+    </button>
+    <button id="btn-mute" class="side-btn" title="Sound (M)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9.5h4l5-4v13l-5-4H4z"/><path class="wave" d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+      <span class="side-label">Sound</span>
+    </button>
+    <button id="btn-menu" class="side-btn" title="Menu (Esc)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      <span class="side-label">Menu</span>
+    </button>
+  </nav>
+
+  <div id="panel" hidden>
+    <div class="panel-body" role="dialog" aria-modal="true" aria-labelledby="panel-title">
+      <div class="panel-head"><h3 id="panel-title"></h3><button id="panel-close" class="panel-x" aria-label="Close">✕</button></div>
+      <div id="panel-content"></div>
+    </div>
+  </div>
+
+  <div id="textbox" hidden>
+    <div id="speaker"></div>
+    <div id="text"></div>
+    <div id="advance">▼</div>
+  </div>
+  <div id="choices"></div>
+
+  <div id="phone" hidden>
+    <div class="phone-body">
+      <div class="phone-status"><span id="phone-clock">3:33</span><span>No Service</span></div>
+      <div id="phone-list-view">
+        <h3>Contacts</h3>
+        <ul id="contacts"></ul>
+      </div>
+      <div id="phone-call-view" hidden>
+        <div class="call-name" id="call-name"></div>
+        <div class="call-status" id="call-status"></div>
+        <div class="call-line" id="call-line"></div>
+      </div>
+      <button id="phone-close" class="phone-close">Close</button>
+    </div>
+  </div>
+
+  <div id="title" class="screen">
+    <div class="title-cn">紅包</div>
+    <div class="title-en">The Red Envelope</div>
+    <div class="title-mem" id="title-mem"></div>
+    <div class="menu">
+      <button class="menu-btn" id="btn-begin">Begin</button>
+      <button class="menu-btn" id="btn-continue" hidden>Continue</button>
+    </div>
+    <div class="title-note">Headphones. Lights off. Don't pick anything up off the road.</div>
+  </div>
+
+  <div id="endscreen" class="screen" hidden>
+    <div class="end-cn" id="end-cn"></div>
+    <div class="end-en" id="end-en"></div>
+    <div class="end-note" id="end-note"></div>
+    <div class="end-tail" id="end-tail"></div>
+    <div class="menu"><button class="menu-btn" id="btn-totitle">Return</button></div>
+  </div>
+
+  <div id="sub" class="layer"></div>
+</div>
+
+<script src="js/audio.js"></script>
+<script src="js/art.js"></script>
+<script src="js/story.js"></script>
+<script src="js/engine.js"></script>
+</body>
+</html>
