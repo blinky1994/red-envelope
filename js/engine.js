@@ -389,7 +389,7 @@
   function endNode() {
     const choices = (val(node.choices) || []).filter(c => !c.if || c.if(S, mem));
     if (choices.length) { showChoices(choices); return; }
-    if (node.end) { showEnd(node.end); return; }
+    if (node.end) { showEnd(); return; }
     const go = val(node.go);
     if (go) goto(go);
   }
@@ -402,30 +402,54 @@
     el.speaker.textContent = sp ? val(sp.name) : '';
     el.text.className = sp ? (sp.cls || '') : 'narr';
     if (style) el.text.classList.add(style);
-    backlog.push({ who: el.speaker.textContent, text, cls: style || (sp ? sp.cls || '' : 'narr') });
+    backlog.push({ whoKey: who, who: el.speaker.textContent, text: resolveText(text), cls: style || (sp ? sp.cls || '' : 'narr') });
     if (backlog.length > 120) backlog.shift();
     typeOut(text, slow ? 70 : 24);
   }
 
-  function typeOut(text, speed = 24) {
+  // [[wrong|right]] in a line: the narrator types the wrong thing, hesitates,
+  // and quietly rewrites it. History correcting itself in front of you.
+  const CORRECTION = /\[\[([^|\]]*)\|([^\]]*)\]\]/g;
+  const resolveText = t => t.replace(CORRECTION, '$2');
+  let unskippable = false;
+
+  function typeOut(raw, speed = 24) {
     clearTimeout(typeTimer);
-    fullText = text;
+    fullText = resolveText(raw);
+    unskippable = CORRECTION.test(raw);
+    CORRECTION.lastIndex = 0;
+    const ops = [];
+    raw.split(/(\[\[[^\]]*\]\])/).forEach(part => {
+      const m = part.match(/^\[\[([^|\]]*)\|([^\]]*)\]\]$/);
+      if (!m) { for (const ch of part) ops.push(['c', ch]); return; }
+      for (const ch of m[1]) ops.push(['c', ch]);
+      ops.push(['p', 900]);
+      for (let k = 0; k < m[1].length; k++) ops.push(['d']);
+      ops.push(['p', 350]);
+      for (const ch of m[2]) ops.push(['c', ch]);
+    });
     el.text.textContent = '';
     el.advance.classList.remove('show');
     typing = true;
-    let i = 0;
+    let shown = '', i = 0;
     const step = () => {
-      i++;
-      el.text.textContent = text.slice(0, i);
-      if (i >= text.length) { finishTyping(); return; }
-      const c = text[i - 1];
-      typeTimer = setTimeout(step, '.!?'.includes(c) ? speed * 10 : ',;—'.includes(c) ? speed * 5 : speed);
+      const op = ops[i++];
+      if (!op) { finishTyping(); return; }
+      let delay = speed;
+      if (op[0] === 'c') {
+        shown += op[1];
+        delay = '.!?'.includes(op[1]) ? speed * 10 : ',;—'.includes(op[1]) ? speed * 5 : speed;
+      } else if (op[0] === 'd') { shown = shown.slice(0, -1); delay = 60; }
+      else delay = op[1];
+      el.text.textContent = shown;
+      typeTimer = setTimeout(step, delay);
     };
     typeTimer = setTimeout(step, speed);
   }
 
   function finishTyping() {
     clearTimeout(typeTimer);
+    unskippable = false;
     el.text.textContent = fullText;
     typing = false;
     el.advance.classList.add('show');
@@ -491,7 +515,7 @@
 
   function advance() {
     if (!started || busy || awaitingChoice || overlayOpen()) return;
-    if (typing) { finishTyping(); return; }
+    if (typing) { if (!unskippable) finishTyping(); return; }
     if (bigShowing) {
       if (bigLock) return;
       hideBig();
@@ -513,7 +537,13 @@
     let line = '';
     if (mem.plays > 0) line = 'You came back.';
     if (mem.leftEnvelope) line = 'You tried to leave it on the road. It remembers.';
-    if (mem.finished > 0) line = 'She has been waiting for you.';
+    // After Day One, the wedding is on the real calendar and keeps counting down.
+    if (mem.weddingAt) {
+      const d = daysLeft();
+      line = d > 1 ? `${d} days until the wedding. She counts them even when you aren't here.`
+        : d === 1 ? 'The wedding is tomorrow night.'
+        : 'The wedding was supposed to be tonight. She is still waiting at the water.';
+    }
     el.titleMem.textContent = line;
   }
 
@@ -531,18 +561,33 @@
     goto(S.node || 'intro');
   }
 
-  function showEnd(end) {
+  const DAY_MS = 86400000;
+  const daysLeft = () => Math.max(0, Math.ceil((mem.weddingAt - Date.now()) / DAY_MS));
+
+  // The chapter ends with a wedding invitation, dated on the player's real
+  // calendar: six days from tonight, which falls on 七夕, the lovers' night.
+  function showEnd() {
     started = false;
     mem.finished++;
+    if (!mem.weddingAt) mem.weddingAt = Date.now() + 6 * DAY_MS;
     saveMem();
     store.del(SAVE_KEY);
     el.textbox.hidden = true;
-    $('#end-cn').textContent = val(end.cn);
-    $('#end-en').textContent = val(end.en);
-    $('#end-note').textContent = val(end.note);
-    $('#end-tail').textContent = val(end.tail);
-    Sound.ambient(['drone']);
-    setTimeout(() => { el.end.hidden = false; }, 1200);
+    closeOverlays();
+    const date = new Date(mem.weddingAt).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const guests = ['ama', 'mom', 'wen'].filter(k => S.family.includes(k)).map(k => NAME_OF[k]);
+    const d = daysLeft();
+    $('#end-card').innerHTML = `
+      <div class="inv-xi">囍</div>
+      <div class="inv-cn">謹訂於七月初七 七夕<br>林秋月 小姐 與 阿偉 先生 結婚</div>
+      <div class="inv-en">The family of <b>Lin Qiu-Yue</b><br>requests the honour of your presence<br>at her marriage to <b>A-Wei</b>.</div>
+      <div class="inv-date">${esc(date)} · 3:33 AM</div>
+      <div class="inv-venue">At the reservoir, two kilometres past the shrine.</div>
+      <div class="inv-guests">Family of the groom attending: ${guests.length ? esc(guests.join(' · ')) : 'none'}</div>
+      <div class="inv-note">You needn't bring anything. We will send someone for you.</div>`;
+    $('#end-note').textContent = d > 1 ? `${d} days.` : d === 1 ? 'Tomorrow.' : 'Tonight.';
+    Sound.ambient(['drone', 'suona']);
+    setTimeout(() => { el.end.hidden = false; }, 1400);
   }
 
   // ---------------------------------------------------------------- phone
@@ -599,7 +644,28 @@
   $('#btn-phone').addEventListener('click', e => { e.stopPropagation(); openPhone(); });
   $('#phone-close').addEventListener('click', e => { e.stopPropagation(); el.phone.hidden = true; });
   el.phone.addEventListener('click', e => { e.stopPropagation(); if (e.target === el.phone) el.phone.hidden = true; });
-  $('#btn-mute').addEventListener('click', e => { e.stopPropagation(); e.currentTarget.classList.toggle('muted', Sound.toggleMute()); });
+  // Sound: the sidebar button opens a volume slider; M still mutes.
+  const volPop = $('#vol-pop'), volRange = $('#vol-range'), volPct = $('#vol-pct');
+  const savedVol = store.get('redenvelope.vol');
+  const syncVol = () => {
+    const v = Sound.getVolume(), muted = Sound.isMuted();
+    volRange.value = Math.round(v * 100);
+    volPct.textContent = muted ? 'Muted' : `${Math.round(v * 100)}%`;
+    $('#btn-mute').classList.toggle('muted', muted || v === 0);
+    $('#vol-mute').textContent = muted ? 'Unmute' : 'Mute';
+  };
+  if (typeof savedVol === 'number') Sound.setVolume(savedVol);
+  syncVol();
+  $('#btn-mute').addEventListener('click', e => { e.stopPropagation(); volPop.hidden = !volPop.hidden; });
+  volRange.addEventListener('input', () => {
+    Sound.setVolume(volRange.value / 100);
+    if (Sound.isMuted()) Sound.toggleMute();
+    store.set('redenvelope.vol', volRange.value / 100);
+    syncVol();
+  });
+  $('#vol-mute').addEventListener('click', e => { e.stopPropagation(); Sound.toggleMute(); syncVol(); });
+  volPop.addEventListener('click', e => e.stopPropagation());
+  document.addEventListener('click', e => { if (!e.target.closest('#vol-pop, #btn-mute')) volPop.hidden = true; });
 
   // ---------------------------------------------------------------- panels
   const backlog = [];
@@ -635,9 +701,21 @@
       ? items.map(i => `<div class="pocket-item">${ART.item(i.art)}<div><h4>${esc(i.name)}</h4><p>${esc(i.text)}</p></div></div>`).join('')
       : '<p class="empty">Car keys. A receipt from a 7-Eleven in Taipei. Nothing else.</p>');
   }
+  // Once someone is gone, the record forgets them too: their lines lose their
+  // name, and every mention of them becomes "someone". Nothing announces it.
+  const NAME_OF = { ama: 'Ama', mom: 'Mom', wen: 'Xiao-Wen' };
+  function remembered(l) {
+    let { who, text } = l;
+    for (const k of S.lost) {
+      if (l.whoKey === k) who = '';
+      text = text.replace(new RegExp(`\\b${NAME_OF[k]}(['’]s)?\\b`, 'g'), (m, poss) => (poss ? `someone${poss}` : 'someone'));
+    }
+    text = text.replace(/(^|[.!?]\s+|—\s*|"\s*)someone/g, (m, pre) => `${pre}Someone`);
+    return { ...l, who, text };
+  }
   function openLog() {
     openPanel('Log', backlog.length
-      ? backlog.map(l => `<div class="log-line ${esc(l.cls)}">${l.who ? `<b>${esc(l.who)}</b>` : ''}${esc(l.text)}</div>`).join('')
+      ? backlog.map(remembered).map(l => `<div class="log-line ${esc(l.cls)}">${l.who ? `<b>${esc(l.who)}</b>` : ''}${esc(l.text)}</div>`).join('')
       : '<p class="empty">Nothing yet.</p>');
     const c = $('#panel-content');
     c.scrollTop = c.scrollHeight;
@@ -661,7 +739,12 @@
   el.panel.addEventListener('click', e => { e.stopPropagation(); if (e.target === el.panel) closeOverlays(); });
 
   // ---------------------------------------------------------------- horror tricks
-  // 1) The tab title changes when you look away.
+  // 1) The tab title and icon change when you look away.
+  const svgIcon = body => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${body}</svg>`);
+  const ICON_ENVELOPE = svgIcon('<rect x="6" y="14" width="52" height="36" rx="3" fill="#b3121b"/><path d="M6 16 L32 34 L58 16" fill="none" stroke="#6e070c" stroke-width="3"/><circle cx="32" cy="34" r="5" fill="#d8b454"/>');
+  const ICON_EFFIGY = svgIcon('<ellipse cx="32" cy="34" rx="24" ry="27" fill="#ece6d6"/><path d="M8 30 C8 4 56 4 56 30 C46 18 18 18 8 30Z" fill="#0b0b0e"/><circle cx="19" cy="42" r="6" fill="#e0506a" opacity=".7"/><circle cx="45" cy="42" r="6" fill="#e0506a" opacity=".7"/><ellipse cx="24" cy="33" rx="3" ry="4" fill="#15100d"/><ellipse cx="40" cy="33" rx="3" ry="4" fill="#15100d"/><path d="M25 50 Q32 55 39 50" stroke="#b3102a" stroke-width="3" fill="none"/>');
+  const setIcon = href => { const l = $('#favicon'); if (l) l.href = href; };
+  setIcon(ICON_ENVELOPE);
   const AWAY_TITLES = ['她在等你 · she is waiting', '回來 · come back', '...husband?', '七日 · seven days'];
   document.addEventListener('visibilitychange', () => {
     const haunted = started && S && S.flags.envelope;
@@ -670,9 +753,11 @@
       document.title = AWAY_TITLES[Math.floor(Math.random() * AWAY_TITLES.length)];
       mem.tabLeaves++;
       saveMem();
+      setIcon(ICON_EFFIGY);
     } else {
       document.title = BASE_TITLE;
-      if (haunted && Math.random() < 0.5) setTimeout(subliminal, 350);
+      // her face stays in your tab bar a little longer than it should
+      setTimeout(() => setIcon(ICON_ENVELOPE), 2500 + Math.random() * 4000);
     }
   });
 
@@ -726,7 +811,7 @@
     if (key === 'p') { openPhone(); return; }
     if (key === 'i') { openPocket(); return; }
     if (key === 'l') { openLog(); return; }
-    if (key === 'm') { $('#btn-mute').click(); return; }
+    if (key === 'm') { Sound.toggleMute(); syncVol(); return; }
     if (e.key === ' ' || e.key === 'Enter') {
       if (document.activeElement && document.activeElement.classList.contains('choice')) return;
       e.preventDefault();

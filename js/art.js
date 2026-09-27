@@ -122,7 +122,7 @@ window.ART = (() => {
       if (r() < 0.25) drops += `<path d="M${f1(x)} ${f1(y + rad)} q${f1((r() - 0.5) * 6)} ${f1(20 + r() * 50)} 0 ${f1(30 + r() * 60)}" stroke-width="2" fill="none"/>`;
     }
     const env = withEnvelope ? `
-      <g transform="rotate(-7 1040 655)">
+      <g transform="translate(0 -95) rotate(-7 1040 655)">
         <rect x="975" y="620" width="130" height="78" rx="3" fill="#a3121a"/>
         <rect x="983" y="628" width="114" height="62" fill="none" stroke="#c9a24a" stroke-width="2"/>
         <text x="1040" y="675" text-anchor="middle" font-family="Noto Serif TC, serif" font-weight="900" font-size="34" fill="#d8b454">囍</text>
@@ -143,7 +143,19 @@ window.ART = (() => {
   }
 
   // ---------------- Ama's house
-  function houseFar(watcher) {
+  // The framed family photo on the wall. Whoever has been erased is simply not in it.
+  function familyPhoto(state) {
+    const fam = state && state.family ? state.family : ['ama', 'mom', 'wen'];
+    const fig = (x, h, head, hair, body) => `<g><rect x="${x - 7}" y="${286 - h}" width="14" height="${h - 12}" fill="${body}"/><circle cx="${x}" cy="${286 - h - 6}" r="7" fill="#d9c2a4"/>${hair ? `<path d="M${x - 7} ${286 - h - 7} q7 -10 14 0" fill="${hair}"/>` : ''}</g>`;
+    let out = '<rect x="714" y="204" width="122" height="82" fill="#8a7a5e" opacity=".55"/>';
+    if (fam.includes('ama')) out += fig(734, 44, 0, '#bbb', '#7a1a22');
+    if (fam.includes('mom')) out += fig(758, 54, 0, '#1a120e', '#5a4032');
+    out += fig(784, 62, 0, '#1a120e', '#2a2e36');
+    if (fam.includes('wen')) out += fig(810, 46, 0, '#1a120e', '#e6e2d8');
+    return out;
+  }
+
+  function houseFar(watcher, state) {
     let grille = '';
     for (let x = 202; x < 490; x += 32) grille += `<line x1="${x}" y1="220" x2="${x}" y2="550"/>`;
     const face = watcher ? `
@@ -162,7 +174,7 @@ window.ART = (() => {
       <rect x="560" y="200" width="90" height="130" fill="#b9ae96" opacity=".5"/>
       <rect x="570" y="215" width="70" height="20" fill="#8a1a1a" opacity=".6"/>
       <text x="605" y="300" text-anchor="middle" font-family="Noto Serif TC, serif" font-weight="900" font-size="48" fill="#3a2a1a" opacity=".7">七</text>
-      <g transform="rotate(-4 780 250)"><rect x="700" y="190" width="150" height="110" fill="#1a120c" stroke="#3a2a18" stroke-width="6"/><rect x="714" y="204" width="122" height="82" fill="#4a4034" opacity=".5"/></g>
+      <g transform="rotate(-4 780 250)"><rect x="700" y="190" width="150" height="110" fill="#1a120c" stroke="#3a2a18" stroke-width="6"/>${familyPhoto(state)}</g>
       <rect x="880" y="200" width="100" height="80" fill="#1a120c" stroke="#3a2a18" stroke-width="6"/>
       <circle cx="1480" cy="240" r="48" fill="#1c140e" stroke="#3a2a18" stroke-width="6"/>
       <circle cx="1480" cy="240" r="36" fill="#b9ae96" opacity=".35"/>
@@ -376,12 +388,12 @@ window.ART = (() => {
     car_env: () => {
       const s = SCENES.car();
       s.layers[2] = carInterior(true);
-      s.lights.push({ x: 1040, y: 660, r: 0.12, c: '255,60,50', i: 0.55, fl: 'lantern', depth: 0 });
+      s.lights.push({ x: 1040, y: 565, r: 0.12, c: '255,60,50', i: 0.55, fl: 'lantern', depth: 0 });
       return s;
     },
 
-    house: () => ({
-      layers: [houseFar(false), houseMid(), houseNear()],
+    house: state => ({
+      layers: [houseFar(false, state), houseMid(), houseNear()],
       lights: [
         { x: 720, y: 130, r: 0.4, c: '255,70,50', i: 0.75, fl: 'lantern', depth: 0.2 },
         { x: 1037, y: 400, r: 0.22, c: '255,170,90', i: 0.8, fl: 'candle', depth: 0.2 },
@@ -391,9 +403,9 @@ window.ART = (() => {
       dark: 0.72, grade: 'warm', fog: null, charLight: 0.3,
     }),
 
-    house_watch: () => {
-      const s = SCENES.house();
-      s.layers[0] = houseFar(true);
+    house_watch: state => {
+      const s = SCENES.house(state);
+      s.layers[0] = houseFar(true, state);
       s.lights.push({ x: 330, y: 400, r: 0.1, c: '170,190,180', i: 0.5, fl: 'steady', depth: 0.05 });
       return s;
     },
@@ -468,8 +480,11 @@ window.ART = (() => {
   // A living person: soft brushwork, eyes with lids, a mouth that could move.
   const livingFace = (tone = '#e6cdb4') => `
     <ellipse cx="200" cy="222" rx="56" ry="66" fill="${tone}" stroke="${INK}" stroke-width="3"/>
-    <path d="M168 214 q10 -6 20 0 M212 214 q10 -6 20 0" stroke="${INK}" stroke-width="3" fill="none" stroke-linecap="round"/>
-    <path d="M170 220 q8 4 16 0 M214 220 q8 4 16 0" stroke="${INK}" stroke-width="2" fill="none" opacity=".6"/>
+    <path d="M164 204 q13 -7 26 -1 M210 203 q13 -6 26 1" stroke="${INK}" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <ellipse cx="178" cy="219" rx="10" ry="6" fill="#f4eee2" stroke="${INK}" stroke-width="1.5"/><ellipse cx="222" cy="219" rx="10" ry="6" fill="#f4eee2" stroke="${INK}" stroke-width="1.5"/>
+    <circle cx="179" cy="219" r="4.2" fill="#2a1a12"/><circle cx="223" cy="219" r="4.2" fill="#2a1a12"/>
+    <circle cx="180.5" cy="217.5" r="1.3" fill="#fff"/><circle cx="224.5" cy="217.5" r="1.3" fill="#fff"/>
+    <path d="M167 215 q11 -7 22 0 M211 215 q11 -7 22 0" stroke="${INK}" stroke-width="2" fill="none"/>
     <path d="M200 226 l-4 20 l6 2" stroke="#8a6a52" stroke-width="2" fill="none"/>
     <path d="M186 262 q14 5 28 0" stroke="#8a3a2a" stroke-width="3" fill="none" stroke-linecap="round"/>
     <ellipse cx="170" cy="246" rx="12" ry="6" fill="#d8907a" opacity=".2"/><ellipse cx="230" cy="246" rx="12" ry="6" fill="#d8907a" opacity=".2"/>`;
@@ -624,6 +639,8 @@ window.ART = (() => {
     men: () => svgChar('mn', '0 0 1100 800', '',
       brother(0, 40, 0.95, -4, [100, 480]) + brother(700, 30, 0.97, 12, [250, 560]) + brother(350, 0, 1, -2, [60, 600]), 4),
     bride: () => bride(false),
+    bride_far: () => bride(false),
+    bride_mid: () => bride(false),
     bride_hand: () => bride(true),
   };
 
@@ -647,10 +664,13 @@ window.ART = (() => {
         <path d="M-40 190 L-34 90 C-30 76 30 76 34 90 L40 190Z" fill="#c9c0a8"/>
         <path d="M34 100 C60 120 80 130 100 128" stroke="#caa080" stroke-width="14" fill="none" stroke-linecap="round"/>
       </g>
-      <path d="M254 44 L254 270 C256 280 262 282 268 272 L270 262 L270 44Z" fill="#e8dcc0"/>
-      <path d="M270 44 L476 44 L476 344 L270 344 L270 280 L262 280 L262 266 L270 262Z" fill="#e8dcc0"/>
-      <path d="M258 270 C250 272 246 280 252 286 C262 292 270 282 268 272" fill="#d4a888"/>
-      <path d="M270 44 L270 262" stroke="#9a8a6a" stroke-width="1.5" stroke-dasharray="3 3"/>
+      <path d="M262 44 L266 60 L260 78 L267 96 L261 114 L268 132 L262 150 L268 168 L261 186 L267 204 L262 222 L268 240 L263 256 C270 262 280 262 286 270 C292 280 284 292 272 292 L266 300 L262 318 L268 344 L476 344 L476 44Z" fill="#2a2018"/>
+      <path d="M262 44 L266 60 L260 78 L267 96 L261 114 L268 132 L262 150 L268 168 L261 186 L267 204 L262 222 L268 240 L263 256" stroke="#f0e6cc" stroke-width="2" fill="none"/>
+      <g stroke="#1a120c" stroke-width="1.5">
+        <path d="M246 268 C252 256 266 256 276 262 C286 268 288 282 278 290 C268 298 252 296 246 286Z" fill="#dcb494"/>
+        <path d="M252 262 q6 -6 12 0 M258 260 q6 -6 12 0 M264 262 q6 -5 11 1" fill="none"/>
+        <path d="M250 272 q14 4 26 0 M252 282 q12 3 22 0" stroke="#f4eee2" stroke-width="2" fill="none"/>
+      </g>
       ${withPrint ? `<g fill="#9a0a10" opacity=".85"><ellipse cx="370" cy="200" rx="34" ry="42"/><ellipse cx="330" cy="150" rx="8" ry="22" transform="rotate(-20 330 150)"/><ellipse cx="352" cy="138" rx="8" ry="24"/><ellipse cx="376" cy="134" rx="8" ry="25"/><ellipse cx="400" cy="142" rx="7" ry="22" transform="rotate(15 400 142)"/><ellipse cx="410" cy="200" rx="7" ry="18" transform="rotate(50 410 200)"/></g><path d="M360 240 l-3 60 M380 238 l2 40" stroke="#9a0a10" stroke-width="4" opacity=".7"/>` : ''}
       <rect x="20" y="20" width="480" height="380" fill="url(#phAge)"/>
     </g>`, `

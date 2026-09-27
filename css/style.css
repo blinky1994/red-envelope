@@ -483,3 +483,72 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   #grain { animation: none; }
   #stage.shake { animation: none; }
 }
+
+/* ---------- volume ---------- */
+#sidebar { overflow: visible; }
+#vol-pop {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-10%);
+  width: 13rem;
+  padding: .8rem 1rem;
+  background: rgba(10,5,5,.95);
+  border: 1px solid rgba(179,18,27,.5);
+  box-shadow: 0 10px 40px rgba(0,0,0,.8);
+  display: flex; flex-direction: column; gap: .5rem;
+}
+#vol-pop label { font-size: .7rem; letter-spacing: .2em; text-transform: uppercase; color: var(--dim); }
+#vol-range { width: 100%; accent-color: var(--red-hot); cursor: pointer; }
+.vol-row { display: flex; justify-content: space-between; align-items: center; font-size: .85rem; }
+#vol-mute { padding: .2rem .6rem; border: 1px solid rgba(255,255,255,.2); font-size: .75rem; letter-spacing: .1em; }
+#vol-mute:hover { border-color: var(--red-hot); }
+
+/* ---------- timed choices: the bar never shifts the buttons ---------- */
+.choice-timer { position: absolute; left: 0; right: 0; top: -12px; }
+
+/* ---------- close-ups are held up to your face, not pasted in the sky ---------- */
+#item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 32%, rgba(0,0,0,.25), rgba(0,0,0,.82) 70%);
+  opacity: 0;
+  transition: opacity .6s;
+}
+#item.show::before { opacity: 1; }
+#item svg { position: relative; }
+
+/* ---------- she doesn't appear; she was always there ---------- */
+.char[data-k="bride_far"] svg { height: 30vh; opacity: .45; transform: translateY(-30vh); }
+.char[data-k="bride_mid"] svg { height: 52vh; opacity: .7; transform: translateY(-16vh); }
+.char[data-k="bride"] svg, .char[data-k="bride_hand"] svg { height: 118vh; }
+.char[data-k^="bride"] { animation-duration: 2.4s; }
+
+/* ---------- the log forgets people ---------- */
+.log-line:not(:has(b)).whisper, .log-line:not(:has(b)):not(.narr):not(.memory) { color: #b9b0a2; }
+
+/* ---------- ending: a wedding invitation ---------- */
+.end-kicker { font-size: .8rem; letter-spacing: .4em; text-transform: uppercase; color: var(--dim); margin-bottom: 1.2rem; }
+.invite {
+  width: min(30rem, 100%);
+  padding: 2rem 2.2rem 1.8rem;
+  text-align: center;
+  color: #f3dfb0;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.08), transparent 60%),
+    linear-gradient(160deg, #a3121a, #6e070c);
+  border: 2px solid #d8b454;
+  outline: 1px solid #d8b454;
+  outline-offset: -10px;
+  box-shadow: 0 30px 80px rgba(0,0,0,.9), 0 0 60px rgba(160,10,20,.35);
+  animation: fadeIn 2s both;
+}
+.inv-xi { font-family: 'Noto Serif TC', serif; font-weight: 900; font-size: 3.4rem; line-height: 1; color: #e8c460; margin-bottom: .8rem; }
+.inv-cn { font-family: 'Noto Serif TC', serif; font-size: 1rem; line-height: 1.8; margin-bottom: .9rem; }
+.inv-en { font-style: italic; line-height: 1.5; margin-bottom: 1rem; }
+.inv-en b { font-style: normal; font-weight: 600; }
+.inv-date { font-size: 1.15rem; letter-spacing: .06em; color: #fff3d0; margin-bottom: .3rem; }
+.inv-venue { margin-bottom: 1rem; }
+.inv-guests { font-size: .85rem; letter-spacing: .05em; opacity: .85; padding-top: .8rem; border-top: 1px solid rgba(216,180,84,.4); margin-bottom: .6rem; }
+.inv-note { font-size: .9rem; font-style: italic; opacity: .8; }

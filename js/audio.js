@@ -5,7 +5,8 @@
 // convolution reverb, so things sound like they are *somewhere* — a room,
 // a valley, a courtyard — instead of inside your head.
 window.Sound = (() => {
-  let ctx = null, master = null, reverb = null, noiseBuf = null, muted = false;
+  let ctx = null, master = null, reverb = null, noiseBuf = null, muted = false, volume = 0.8;
+  const level = () => (muted ? 0 : volume * 1.1);
   const active = {};
 
   function init() {
@@ -18,7 +19,7 @@ window.Sound = (() => {
     comp.threshold.value = -16; comp.ratio.value = 3;
     comp.connect(ctx.destination);
     master = ctx.createGain();
-    master.gain.value = muted ? 0 : 0.9;
+    master.gain.value = level();
     master.connect(comp);
 
     reverb = ctx.createConvolver();
@@ -365,6 +366,22 @@ window.Sound = (() => {
       burst(t, 1.2, 0.3, 'bandpass', 1200, 0.5, b);
       SFX.tinnitus(t + 0.3);
     },
+    dread(t) { // a low cluster that swells for three seconds, then simply isn't there
+      const b = bus(0.9);
+      const lp = filter('lowpass', 180, 2);
+      lp.frequency.setValueAtTime(180, t);
+      lp.frequency.linearRampToValueAtTime(900, t + 3);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.22, t + 3);
+      g.gain.setValueAtTime(0.0001, t + 3.05);
+      lp.connect(g).connect(b);
+      [55, 58.3, 82.4, 87.3].forEach(f => {
+        const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f;
+        o.connect(lp); o.start(t); o.stop(t + 3.1);
+      });
+      SFX.tinnitus(t + 3.05);
+    },
     tinnitus(t) { // the ringing left behind after a shock
       const o = ctx.createOscillator(); o.frequency.value = 7200;
       const g = ctx.createGain();
@@ -433,13 +450,11 @@ window.Sound = (() => {
     [].concat(names).forEach(n => SFX[n] && SFX[n](ctx.currentTime + 0.02));
   }
 
-  function toggleMute() {
-    muted = !muted;
-    if (master) master.gain.setTargetAtTime(muted ? 0 : 0.9, ctx.currentTime, 0.05);
-    return muted;
-  }
+  const applyLevel = () => { if (master) master.gain.setTargetAtTime(level(), ctx.currentTime, 0.05); };
+  function toggleMute() { muted = !muted; applyLevel(); return muted; }
+  function setVolume(v) { volume = Math.min(1, Math.max(0, v)); applyLevel(); }
 
   const current = () => Object.keys(active);
 
-  return { init, ambient, current, sfx, toggleMute };
+  return { init, ambient, current, sfx, toggleMute, setVolume, getVolume: () => volume, isMuted: () => muted };
 })();
