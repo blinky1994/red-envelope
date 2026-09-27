@@ -129,7 +129,18 @@ window.Sound = (() => {
         const t = ctx.currentTime;
         tone(2200 + Math.random() * 3000, t, 0.02, 0.08 + Math.random() * 0.1, 'sine', out);
       }, 40, 220);
-      return { out, level: 0.2, nodes: [a, b], timer: drops };
+      const voice = scatter(() => {
+        const t = ctx.currentTime + 0.02;
+        const n = ctx.createBufferSource(); n.buffer = noiseBuf;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.1, t + 0.5); g.gain.linearRampToValueAtTime(0, t + 1.6);
+        const am = ctx.createGain(); am.gain.value = 0.4;
+        const lfo = ctx.createOscillator(); lfo.frequency.value = 5 + Math.random() * 3;
+        const lg = ctx.createGain(); lg.gain.value = 0.4; lfo.connect(lg).connect(am.gain);
+        n.connect(filter('bandpass', 1400 + Math.random() * 800, 4)).connect(am).connect(g).connect(bus(0.8, Math.random() * 2 - 1));
+        n.start(t, Math.random()); n.stop(t + 1.7); lfo.start(t); lfo.stop(t + 1.7);
+      }, 40000, 90000);
+      return { out, level: 0.2, nodes: [a, b], timer: { clear() { drops.clear(); voice.clear(); } } };
     },
     rain_in() { // rain heard through a tin roof
       const out = bus(0.1);
@@ -178,13 +189,20 @@ window.Sound = (() => {
       const hg = ctx.createGain(); hg.gain.value = 0.12;
       hum.connect(hg).connect(out);
       a.start(); hum.start();
-      return { out, level: 0.12, nodes: [a, hum] };
+      const far = bus(1.2, Math.random() * 1.6 - 0.8);
+      const distant = scatter(() => {
+        const t = ctx.currentTime + 0.02;
+        const n = 1 + Math.floor(Math.random() * 3);
+        for (let k = 0; k < n; k++) { burst(t + k * 0.55, 0.14, 0.18, 'lowpass', 300, 1, far); thump(t + k * 0.55, 90, 45, 0.15, 0.12, far); }
+      }, 28000, 70000);
+      return { out, level: 0.12, nodes: [a, hum], timer: distant };
     },
     clock() { // an old wall clock in the next room
       const out = bus(0.5, -0.3);
       let tock = false;
       const tick = () => {
-        const t = ctx.currentTime + 0.02;
+        if (Math.random() < 0.04) return; // a skipped second
+        const t = ctx.currentTime + (Math.random() < 0.02 ? 0.5 : 0.02); // or a late one
         burst(t, 0.03, 0.5, 'bandpass', tock ? 1800 : 2600, 4, out);
         tone(tock ? 900 : 1300, t, 0.015, 0.15, 'square', out);
         tock = !tock;

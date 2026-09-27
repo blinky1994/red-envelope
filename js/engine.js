@@ -404,7 +404,8 @@
     if (style) el.text.classList.add(style);
     backlog.push({ whoKey: who, who: el.speaker.textContent, text: resolveText(text), cls: style || (sp ? sp.cls || '' : 'narr') });
     if (backlog.length > 120) backlog.shift();
-    typeOut(text, slow ? 70 : 24);
+    // Slow lines are for dread, not for waiting: long ones speed up to finish in ~4s.
+    typeOut(text, slow ? Math.max(30, Math.min(70, 4200 / resolveText(text).length)) : 24);
   }
 
   // [[wrong|right]] in a line: the narrator types the wrong thing, hesitates,
