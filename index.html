@@ -35,6 +35,16 @@
     <div id="rain" class="layer"></div>
     <canvas id="light" class="layer"></canvas>
   </div>
+  <!-- A phone camera held up in the dark. What it sees, you see. -->
+  <div id="cam" class="layer" hidden>
+    <div class="cam-view"><div id="cam-face"></div><div class="cam-noise"></div><div class="cam-scan"></div></div>
+    <div class="cam-ui">
+      <span class="cam-rec">● REC</span><span class="cam-time" id="cam-time">03:33:07</span>
+      <span class="cam-iso">ISO 12800 · LOW LIGHT</span><span class="cam-batt">▮▯▯ 9%</span>
+      <i class="cam-c tl"></i><i class="cam-c tr"></i><i class="cam-c bl"></i><i class="cam-c br"></i>
+      <div class="cam-lock" id="cam-lock" hidden><span>FACE 1</span></div>
+    </div>
+  </div>
   <div id="item" class="layer"></div>
   <div id="fx" class="layer"></div>
   <div id="memory" class="layer"></div>

@@ -155,6 +155,9 @@ window.ART = (() => {
     return out;
   }
 
+  const xiPaper = (x, y, s = 1) => `<g transform="translate(${x} ${y}) rotate(45) scale(${s})"><rect x="-38" y="-38" width="76" height="76" fill="#b3121b" opacity=".9"/>
+    <text transform="rotate(-45)" x="0" y="17" text-anchor="middle" font-family="Noto Serif TC, serif" font-weight="900" font-size="46" fill="#d8b454">囍</text></g>`;
+
   function houseFar(watcher, state) {
     let grille = '';
     for (let x = 202; x < 490; x += 32) grille += `<line x1="${x}" y1="220" x2="${x}" y2="550"/>`;
@@ -176,6 +179,7 @@ window.ART = (() => {
       <text x="605" y="300" text-anchor="middle" font-family="Noto Serif TC, serif" font-weight="900" font-size="48" fill="#3a2a1a" opacity=".7">七</text>
       <g transform="rotate(-4 780 250)"><rect x="700" y="190" width="150" height="110" fill="#1a120c" stroke="#3a2a18" stroke-width="6"/>${familyPhoto(state)}</g>
       <rect x="880" y="200" width="100" height="80" fill="#1a120c" stroke="#3a2a18" stroke-width="6"/>
+      ${state && state.flags && state.flags.decor ? xiPaper(330, 385, 1.1) + xiPaper(930, 240, 0.7) + xiPaper(605, 380, 0.8) : ''}
       <circle cx="1480" cy="240" r="48" fill="#1c140e" stroke="#3a2a18" stroke-width="6"/>
       <circle cx="1480" cy="240" r="36" fill="#b9ae96" opacity=".35"/>
       <line x1="1480" y1="240" x2="1480" y2="212" stroke="#111" stroke-width="3"/><line x1="1480" y1="240" x2="1500" y2="250" stroke="#111" stroke-width="3"/>
@@ -236,7 +240,9 @@ window.ART = (() => {
         <linearGradient id="bdPane" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a3a50"/><stop offset="1" stop-color="#0e1622"/></linearGradient>` });
   }
 
-  function bedroomMid() {
+  function bedroomMid(fingers) {
+    const tips = fingers ? `<g fill="#cfc6cf" stroke="#15100d" stroke-width="1.5">
+      ${[560, 578, 596, 613].map((y, i) => `<path d="M1406 ${y} q-10 ${2 + i} -12 7 q2 5 12 4Z"/>`).join('')}</g>` : '';
     return layer(0.2, `
       <rect x="1400" y="330" width="220" height="570" fill="#07090e"/>
       <rect x="1400" y="330" width="220" height="570" fill="none" stroke="#11141c" stroke-width="4"/>
@@ -245,7 +251,8 @@ window.ART = (() => {
       <rect x="560" y="520" width="300" height="24" fill="#0d1018"/>
       <rect x="575" y="544" width="16" height="200" fill="#0a0c12"/><rect x="830" y="544" width="16" height="200" fill="#0a0c12"/>
       <path d="M760 520 L780 440 L820 440 L800 520Z" fill="#141a26"/>
-      <g transform="rotate(-18 700 660)"><rect x="640" y="560" width="120" height="16" fill="#0c0f16"/><rect x="650" y="576" width="10" height="170" fill="#0c0f16"/><rect x="740" y="576" width="10" height="170" fill="#0c0f16"/><rect x="640" y="470" width="14" height="100" fill="#0c0f16"/></g>`);
+      <g transform="rotate(-18 700 660)"><rect x="640" y="560" width="120" height="16" fill="#0c0f16"/><rect x="650" y="576" width="10" height="170" fill="#0c0f16"/><rect x="740" y="576" width="10" height="170" fill="#0c0f16"/><rect x="640" y="470" width="14" height="100" fill="#0c0f16"/></g>
+      ${tips}`);
   }
 
   function bedroomNear() {
@@ -488,8 +495,14 @@ window.ART = (() => {
       return s;
     },
 
-    bedroom: () => ({
-      layers: [bedroomFar(), bedroomMid(), bedroomNear()],
+    bedroom: () => SCENES.bedroom_base(false),
+    bedroom_fingers: () => {
+      const sc = SCENES.bedroom_base(true);
+      sc.lights.push({ x: 1400, y: 590, r: 0.06, c: '150,160,180', i: 0.35, fl: 'dying', depth: 0.2 });
+      return sc;
+    },
+    bedroom_base: fingers => ({
+      layers: [bedroomFar(), bedroomMid(fingers), bedroomNear()],
       lights: [
         { x: 1110, y: 350, r: 0.42, c: '150,175,215', i: 0.75, fl: 'steady', depth: 0.05 },
         { x: 960, y: 760, r: 0.35, c: '150,175,215', i: 0.35, fl: 'steady', depth: 0.2 },
@@ -785,8 +798,44 @@ window.ART = (() => {
     </g>`).replace('<defs>', '<defs><pattern id="mkP" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="6" fill="#d8b454" opacity=".35"/></pattern>');
   }
 
+  // ---------------- glimpses: never the whole of her
+  // One small hand pressed flat against the glass, the thread on its finger.
+  const handGlass = () => svgChar('hg', '120 300 160 300', '', `
+    <g opacity=".92">
+      <path d="M176 470 L182 560 L222 560 L226 470Z" fill="#6e0a12" opacity=".6"/>
+      <path d="M170 470 C164 430 170 404 176 396 L178 350 C178 340 190 340 190 350 L192 392 L194 336 C194 324 208 324 208 336 L208 390 L212 342 C212 330 226 330 226 342 L224 396 L230 366 C232 356 244 358 242 370 L236 430 C232 456 224 470 226 470Z"
+        fill="#d8d0d8" stroke="#15100d" stroke-width="2.5"/>
+      <path d="M190 360 l0 12 M207 348 l0 12 M224 352 l0 12" stroke="#b8aeb8" stroke-width="1.5"/>
+      <circle cx="238" cy="382" r="3.5" fill="none" stroke="#ff1a24" stroke-width="3"/>
+      <path d="M238 385 C220 500 90 600 -700 1100" stroke="#ff1a24" stroke-width="2.2" fill="none"/>
+      <g stroke="#c0ccd8" stroke-opacity=".35" stroke-width="2"><path d="M168 380 l-3 80 M236 340 l3 110 M200 470 l-2 60"/></g>
+    </g>`, 1);
+
+  // Wet paper strips hanging into your face from above: she is leaning over you.
+  const veilTop = () => {
+    let strips = '';
+    for (let x = 40; x <= 360; x += 18) {
+      const len = 320 + ((x * 13) % 160);
+      strips += `<rect x="${x}" y="-10" width="15" height="${len}" fill="#7a0a12" stroke="#3a0408" stroke-width="1"/>`;
+      strips += `<circle cx="${x + 7}" cy="${len - 6}" r="3" fill="#9ab" opacity=".5"/>`;
+    }
+    return `<svg viewBox="0 0 400 560" preserveAspectRatio="xMidYMin meet" xmlns="http://www.w3.org/2000/svg"><g class="strips">${strips}
+      <g fill="#c9a24a" opacity=".8"><circle cx="100" cy="30" r="7"/><circle cx="300" cy="30" r="7"/></g></g></svg>`;
+  };
+
+  // Small bare feet on the floorboards, and the wet red hem above them.
+  const feet = () => svgChar('ft', '0 0 400 800', '', `
+    <path d="M110 560 C140 540 260 540 290 560 L296 600 C250 590 150 590 104 600Z" fill="#6e0a12" opacity=".85"/>
+    <g fill="#d8d0d8" stroke="#15100d" stroke-width="2">
+      <path d="M150 604 C146 640 150 690 168 700 C184 704 190 690 186 660 L182 604Z"/>
+      <path d="M220 604 C216 640 218 690 234 700 C250 704 256 690 252 660 L250 604Z"/>
+    </g>
+    <g fill="#9ab" opacity=".45"><ellipse cx="170" cy="712" rx="30" ry="6"/><ellipse cx="238" cy="712" rx="30" ry="6"/></g>
+    <path d="M150 596 l-2 16 M240 596 l1 14" stroke="#9ab" stroke-opacity=".5" stroke-width="2"/>`, 2);
+
   const CHARS = {
     mom, ama, wen, keeper, matchmaker,
+    hand_glass: handGlass, veil_top: veilTop, feet,
     seat_mom: seat, seat_ama: seat, seat_wen: seat,
     men: () => svgChar('mn', '0 0 1100 800', '',
       brother(0, 40, 0.95, -4, [100, 480]) + brother(700, 30, 0.97, 12, [250, 560]) + brother(350, 0, 1, -2, [60, 600]), 4),
@@ -907,6 +956,51 @@ window.ART = (() => {
       <path d="M150 124 L250 124" stroke="#f0d890" stroke-width="3" opacity=".7"/>`),
   };
 
+  // The face in the phone camera. After Gonjiam: black eyes all the way
+  // across, a mouth that keeps opening, lit from below by a phone screen.
+  // Drawn to be seen through noise and blur, never clean.
+  const gonjiam = () => {
+    // Wet hair: thin, uneven, wavy strands, mostly at the sides, a few across the face.
+    const r = rng(77);
+    let hair = '';
+    for (let i = 0; i < 46; i++) {
+      const side = i % 2 ? 1 : -1, across = i < 6;
+      const x0 = 800 + side * (across ? 30 + r() * 120 : 120 + r() * 170);
+      const w = 3 + r() * 7, len = across ? 380 + r() * 260 : 520 + r() * 380;
+      const sway = (r() - 0.5) * 60;
+      hair += `<path d="M${f1(x0)} ${f1(120 + r() * 60)} C${f1(x0 + sway)} ${f1(300 + r() * 80)} ${f1(x0 - sway)} ${f1(480 + r() * 80)} ${f1(x0 + sway * 0.6 + side * 20)} ${f1(160 + len)}" stroke="#040404" stroke-width="${f1(w)}" fill="none" stroke-linecap="round" opacity="${f1(0.75 + r() * 0.25)}"/>`;
+    }
+    return `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="gjLit" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#e2ded6"/><stop offset=".45" stop-color="#a09c96"/><stop offset=".8" stop-color="#3a3836"/><stop offset="1" stop-color="#121110"/></linearGradient>
+      <radialGradient id="gjEdge" cx=".5" cy=".55" r=".55"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".85"/></radialGradient>
+      <radialGradient id="gjSocket" cx=".5" cy=".45" r=".5"><stop offset=".35" stop-color="#0c0b0b" stop-opacity=".95"/><stop offset="1" stop-color="#0c0b0b" stop-opacity="0"/></radialGradient>
+      <radialGradient id="gjVig" cx=".5" cy=".5" r=".6"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".9"/></radialGradient>
+    </defs>
+    <rect width="1600" height="900" fill="#040404"/>
+    <path d="M470 0 L530 0 L480 900 L380 900Z M1070 0 L1130 0 L1230 900 L1130 900Z" fill="#2a0709" opacity=".6"/>
+    <g transform="rotate(-11 800 480)">
+      <path d="M800 110 C930 110 1030 210 1040 370 C1048 500 1000 610 930 720 C890 790 850 880 800 900 C750 880 710 790 670 720 C600 610 552 500 560 370 C570 210 670 110 800 110Z" fill="url(#gjLit)"/>
+      <path d="M800 110 C930 110 1030 210 1040 370 C1048 500 1000 610 930 720 C890 790 850 880 800 900 C750 880 710 790 670 720 C600 610 552 500 560 370 C570 210 670 110 800 110Z" fill="url(#gjEdge)"/>
+      <ellipse cx="705" cy="420" rx="115" ry="92" fill="url(#gjSocket)"/>
+      <ellipse cx="895" cy="420" rx="115" ry="92" fill="url(#gjSocket)"/>
+      <path d="M628 424 C660 372 740 368 786 414 C752 462 670 470 628 424Z" fill="#000"/>
+      <path d="M814 414 C860 368 940 372 972 424 C930 470 848 462 814 414Z" fill="#000"/>
+      <circle cx="918" cy="404" r="3.5" fill="#dfe4dc" opacity=".7"/>
+      <path d="M690 462 C684 520 698 580 690 660 M712 464 C716 520 708 560 718 610 M902 462 C912 540 900 610 912 700 M884 466 C880 520 890 570 884 620"
+        stroke="#050505" stroke-width="7" fill="none" stroke-linecap="round" opacity=".85"/>
+      <path d="M800 470 l-5 60 l9 4" stroke="#3c3a38" stroke-width="3" fill="none" opacity=".6"/>
+      <path d="M728 600 C730 580 870 580 872 600 C884 680 862 800 826 870 C812 894 788 894 774 870 C738 800 716 680 728 600Z" fill="#000"/>
+      <path d="M728 600 C730 580 870 580 872 600" stroke="#2a2826" stroke-width="4" fill="none"/>
+      <path d="M730 604 L676 578 M729 616 L664 630 M871 604 L926 576 M871 616 L938 632 M744 700 L700 724 M858 700 L900 726"
+        stroke="#1b1917" stroke-width="2.5" fill="none"/>
+      <path d="M560 360 C560 180 690 96 800 96 C910 96 1040 180 1040 360 C1000 250 920 196 800 196 C680 196 600 250 560 360Z" fill="#030303"/>
+      ${hair}
+    </g>
+    <rect width="1600" height="900" fill="url(#gjVig)"/>
+  </svg>`;
+  };
+
   // Full-screen face for single-frame subliminal flashes: an effigy, too close.
   const face = () => `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
     <rect width="${W}" height="${H}" fill="#050000"/>
@@ -925,6 +1019,7 @@ window.ART = (() => {
     char: key => (CHARS[key] ? CHARS[key]() : ''),
     item: key => (ITEMS[key] ? ITEMS[key]() : ''),
     face,
+    gonjiam,
     W, H,
   };
 })();

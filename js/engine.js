@@ -355,6 +355,13 @@
         case 'dark': el.stage.classList.add('dark'); break;
         case 'darker': el.stage.classList.add('dark', 'darker'); break;
         case 'dark-off': el.stage.classList.remove('dark', 'darker'); break;
+        case 'pitch': el.stage.classList.add('pitch'); break;          // nothing to see: only text and sound
+        // the phone camera: a viewfinder in the dark, a face-detect box, a face
+        case 'cam': el.stage.classList.add('cam-on'); $('#cam').hidden = false; $('#cam-face').className = ''; $('#cam-face').innerHTML = ''; $('#cam-lock').hidden = true; break;
+        case 'cam-lock': $('#cam-lock').hidden = false; Sound.sfx('beep'); break;
+        case 'cam-face': $('#cam-face').innerHTML = ART.gonjiam(); pulseClass($('#cam-face'), 'show', 600000); Sound.sfx('jolt'); pulseClass(el.stage, 'shake', 600); break;
+        case 'cam-off': el.stage.classList.remove('cam-on'); $('#cam').hidden = true; $('#cam-face').innerHTML = ''; break;
+        case 'pitch-off': el.stage.classList.remove('pitch'); break;
         case 'subliminal': subliminal(); break;
         case 'chroma': pulseClass(el.scene, 'chroma', 700); break;
         case 'memory': pulseClass(el.scene, 'memory', 2000); pulseClass(el.memory, 'go', 2000); break;
@@ -362,7 +369,7 @@
     });
   }
 
-  const LASTING_FX = ['red', 'red-off', 'dark', 'darker', 'dark-off'];
+  const LASTING_FX = ['red', 'red-off', 'dark', 'darker', 'dark-off', 'pitch', 'pitch-off', 'cam', 'cam-off'];
   function applyScene(o, silent = false) {
     if ('bg' in o) World.setScene(val(o.bg));
     if ('rain' in o) World.setRain(val(o.rain));
@@ -411,7 +418,9 @@
     saveMem();
     hideBig();
     el.fx.classList.remove('red');
-    el.stage.classList.remove('dark', 'darker');
+    el.stage.classList.remove('dark', 'darker', 'pitch');
+    $('#cam').hidden = true;
+    el.stage.classList.remove('cam-on');
     applyScene(node);
     updateHud();
     lineIdx = 0;
@@ -1175,6 +1184,12 @@
     return { fire: id => { const e = EVENTS.find(x => x.id === id); if (e) e.run(); } };
   })();
   window.__unease = Unease; // for playtesting: __unease.fire('glance')
+
+  setInterval(() => {
+    if ($('#cam').hidden) return;
+    const s = new Date().getSeconds();
+    $('#cam-time').textContent = `03:33:${String(s).padStart(2, '0')}`;
+  }, 1000);
 
   // ---------------------------------------------------------------- saving, fast-forward
   let curKey = '', curSeen = false, skipping = false, toastTimer = null;

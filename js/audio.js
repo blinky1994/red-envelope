@@ -57,6 +57,23 @@ window.Sound = (() => {
     return g;
   }
 
+  // A sound placed in the room: pan -1 (left) .. 1 (right); dist 0 (at your
+  // ear) .. 1 (far away: quieter, duller, and mostly echo). This is what lets
+  // footsteps approach, instead of just happening.
+  function placed(o = {}, baseSend = 0.35) {
+    const dist = Math.min(1, Math.max(0, o.dist ?? 0.3));
+    const g = ctx.createGain();
+    g.gain.value = (o.vol ?? 1) * (1 - 0.82 * dist);
+    const lp = filter('lowpass', 14000 - 12500 * dist, 0.7);
+    g.connect(lp);
+    let out = lp;
+    if (ctx.createStereoPanner) { const pn = ctx.createStereoPanner(); pn.pan.value = o.pan ?? 0; out.connect(pn); out = pn; }
+    out.connect(master);
+    const send = ctx.createGain(); send.gain.value = baseSend + 1.4 * dist;
+    out.connect(send).connect(reverb);
+    return g;
+  }
+
   // ---------- building blocks ----------
   function noise() {
     const s = ctx.createBufferSource();
@@ -357,8 +374,8 @@ window.Sound = (() => {
       const lp = filter('lowpass', 380); lp.connect(master);
       for (let k = 0; k < 3; k++) tone(118, t + k * 0.85, 0.45, 0.4, 'square', lp);
     },
-    knock(t) { const b = bus(0.7, 0.4); burst(t, 0.18, 0.9, 'lowpass', 420, 1, b); thump(t, 110, 50, 0.18, 0.8, b); },
-    step(t) { const b = bus(0.6, (Math.random() - 0.5) * 0.8); burst(t, 0.14, 0.45, 'lowpass', 600, 1, b); burst(t + 0.02, 0.12, 0.12, 'highpass', 2600, 1, b); },
+    knock(t, o) { const b = o ? placed(o, 0.5) : bus(0.7, 0.4); burst(t, 0.18, 0.9, 'lowpass', 420, 1, b); thump(t, 110, 50, 0.18, 0.8, b); },
+    step(t, o) { const b = o ? placed(o, 0.4) : bus(0.6, (Math.random() - 0.5) * 0.8); burst(t, 0.14, 0.45, 'lowpass', 600, 1, b); burst(t + 0.02, 0.12, 0.12, 'highpass', 2600, 1, b); },
     steps(t) {
       const b = bus(0.4);
       for (let k = 0; k < 5; k++) {
@@ -448,7 +465,7 @@ window.Sound = (() => {
       g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.03, t + 0.1); g.gain.exponentialRampToValueAtTime(0.0001, t + 3.5);
       o.connect(g).connect(master); o.start(t); o.stop(t + 3.6);
     },
-    whisper(t) {
+    whisper(t, o) {
       const n = ctx.createBufferSource(); n.buffer = noiseBuf;
       const am = ctx.createGain(); am.gain.value = 0;
       const lfo = ctx.createOscillator(); lfo.frequency.value = 7 + Math.random() * 5;
@@ -458,12 +475,16 @@ window.Sound = (() => {
       env.gain.setValueAtTime(0, t);
       env.gain.linearRampToValueAtTime(0.5, t + 0.3);
       env.gain.linearRampToValueAtTime(0, t + 1.4);
-      let dest = bus(0.5);
-      if (ctx.createStereoPanner) {
-        const p = ctx.createStereoPanner();
-        p.pan.setValueAtTime(-0.9, t);
-        p.pan.linearRampToValueAtTime(0.9, t + 1.4);
-        p.connect(dest); dest = p;
+      let dest;
+      if (o && o.pan !== undefined) dest = placed(o, 0.3);      // from one fixed place
+      else {                                                     // or passing across your head
+        dest = bus(0.5);
+        if (ctx.createStereoPanner) {
+          const p = ctx.createStereoPanner();
+          p.pan.setValueAtTime(-0.9, t);
+          p.pan.linearRampToValueAtTime(0.9, t + 1.4);
+          p.connect(dest); dest = p;
+        }
       }
       n.connect(filter('bandpass', 2700, 2.5)).connect(am).connect(env).connect(dest);
       n.start(t, Math.random()); n.stop(t + 1.5); lfo.start(t); lfo.stop(t + 1.5);
@@ -503,11 +524,109 @@ window.Sound = (() => {
       thump(t, 60, 30, 0.8, 0.8);
     },
     thud(t) { thump(t, 58, 28, 0.9, 1, bus(0.5)); },
+
+    // ---- for the listening scenes: every one of these can be placed ----
+    tap(t, o = {}) { // a fingertip on glass
+      const b = placed(o, 0.25);
+      tone(2300 + Math.random() * 300, t, 0.018, 0.5, 'sine', b);
+      burst(t, 0.05, 0.35, 'bandpass', 3200, 3, b);
+    },
+    creak(t, o = {}) { // an old floorboard or stair taking weight
+      const b = placed(o, 0.45);
+      const d = 0.45 + Math.random() * 0.45;
+      const src = ctx.createOscillator(); src.type = 'sawtooth';
+      const f0 = 90 + Math.random() * 60;
+      src.frequency.setValueAtTime(f0, t);
+      src.frequency.linearRampToValueAtTime(f0 * (0.8 + Math.random() * 0.5), t + d);
+      const grain = ctx.createGain(); grain.gain.value = 0;
+      const lfo = ctx.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 28 + Math.random() * 30;
+      const lg = ctx.createGain(); lg.gain.value = 0.5; lfo.connect(lg).connect(grain.gain);
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0, t); env.gain.linearRampToValueAtTime(0.5, t + 0.08); env.gain.linearRampToValueAtTime(0, t + d);
+      src.connect(filter('bandpass', 700, 3)).connect(grain).connect(env).connect(b);
+      src.start(t); src.stop(t + d + 0.05); lfo.start(t); lfo.stop(t + d + 0.05);
+    },
+    door(t, o = {}) { // a door or window swinging open, slowly
+      SFX.creak(t, o); SFX.creak(t + 0.5, o); SFX.creak(t + 1.1, { ...o, vol: (o.vol ?? 1) * 0.7 });
+    },
+    breath(t, o = {}) { // someone breathing: in, then out
+      const b = placed(o, 0.2);
+      const n = ctx.createBufferSource(); n.buffer = noiseBuf;
+      const f = filter('bandpass', 1100, 0.9);
+      f.frequency.setValueAtTime(900, t); f.frequency.linearRampToValueAtTime(1300, t + 1.1); f.frequency.linearRampToValueAtTime(700, t + 2.8);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.28, t + 1.0); g.gain.linearRampToValueAtTime(0.02, t + 1.25);
+      g.gain.linearRampToValueAtTime(0.32, t + 1.6); g.gain.linearRampToValueAtTime(0, t + 2.9);
+      n.connect(f).connect(g).connect(b);
+      n.start(t, Math.random()); n.stop(t + 3);
+    },
+    crinkle(t, o = {}) { // paper moving: the effigies
+      const b = placed(o, 0.3);
+      for (let k = 0; k < 26; k++) burst(t + Math.random() * 0.8, 0.02 + Math.random() * 0.03, 0.08 + Math.random() * 0.25, 'highpass', 2500 + Math.random() * 3000, 1, b);
+    },
+    scratch(t, o = {}) { // a fingernail on wood
+      const b = placed(o, 0.35);
+      for (let k = 0; k < 3; k++) {
+        const r = burst(t + k * 0.45, 0.35, 0.3, 'bandpass', 2200 + Math.random() * 900, 7, b);
+        for (let j = 0; j < 8; j++) r.g.gain.setValueAtTime(0.05 + Math.random() * 0.3, t + k * 0.45 + j * 0.04);
+      }
+    },
+    clap(t, o = {}) { // one hand-clap
+      const b = placed(o, 0.4);
+      burst(t, 0.09, 0.9, 'bandpass', 1300 + Math.random() * 300, 0.8, b);
+      burst(t + 0.005, 0.05, 0.4, 'highpass', 3000, 1, b);
+    },
+    claps(t, o = {}) { // the rhythm of a children's clapping game
+      [0, 0.28, 0.56, 1.12, 1.4, 1.68, 2.24, 2.38, 2.52].forEach(d => SFX.clap(t + d, o));
+    },
+    slowclap(t, o = {}) { // slow, wet clapping: three pairs of hands
+      [0, 0.9, 1.8, 2.7].forEach(d => [0, 0.06, 0.13].forEach((e, i) => SFX.clap(t + d + e, { ...o, pan: (o.pan ?? 0) + (i - 1) * 0.3, vol: 0.7 })));
+    },
+    suonaFar(t, o = {}) { // one phrase of the wedding horn, from somewhere on the road
+      const b = placed({ dist: 0.8, ...o }, 0.6);
+      const ws = ctx.createWaveShaper(); ws.curve = distCurve(6);
+      ws.connect(filter('lowpass', 1500)).connect(b);
+      const notes = [587, 659, 784, 880, 988, 784, 659, 523];
+      let s = t;
+      for (let i = 0; i < 6; i++) {
+        const f = notes[Math.floor(Math.random() * notes.length)] * (1 + (Math.random() - 0.5) * 0.035);
+        const d = 0.25 + Math.random() * 0.5;
+        const osc = ctx.createOscillator(); osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(f * 0.94, s); osc.frequency.linearRampToValueAtTime(f, s + 0.08);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(0.3, s + 0.04); g.gain.setValueAtTime(0.3, s + d - 0.05); g.gain.linearRampToValueAtTime(0, s + d);
+        osc.connect(filter('bandpass', 1800, 1.1)).connect(g).connect(ws);
+        osc.start(s); osc.stop(s + d + 0.05);
+        s += d;
+      }
+    },
+    slap(t, o = {}) { // a flat hand hitting a window, hard
+      const b = placed({ dist: 0.05, ...o }, 0.4);
+      burst(t, 0.22, 1, 'lowpass', 900, 1, b); thump(t, 120, 45, 0.3, 1, b);
+      for (let k = 0; k < 6; k++) tone(1800 + Math.random() * 1400, t + 0.01 + k * 0.025, 0.05, 0.1, 'triangle', b);
+    },
+    jolt(t) { // the camera's microphone clipping: a burst of static
+      const b = burst(t, 0.45, 1, 'bandpass', 1800, 0.4);
+      for (let k = 0; k < 8; k++) b.g.gain.setValueAtTime(Math.random() < 0.5 ? 0.3 : 1, t + k * 0.05);
+      thump(t, 90, 40, 0.4, 0.9);
+    },
+    beep(t) { // a phone camera finding focus
+      tone(2700, t, 0.035, 0.08, 'sine'); tone(2700, t + 0.09, 0.035, 0.08, 'sine');
+    },
+    splash(t, o = {}) { // something small entering still water
+      const b = placed(o, 0.8);
+      burst(t, 0.5, 0.5, 'lowpass', 1200, 1, b);
+      thump(t, 140, 60, 0.3, 0.3, b);
+    },
   };
 
+  // sfx('knock') or sfx({ n: 'step', pan: -0.6, dist: 0.8, delay: 0.5 }) or a list of either.
   function sfx(names) {
     if (!ctx) return;
-    [].concat(names).forEach(n => SFX[n] && SFX[n](ctx.currentTime + 0.02));
+    [].concat(names).forEach(x => {
+      const o = typeof x === 'string' ? { n: x } : x;
+      if (SFX[o.n]) SFX[o.n](ctx.currentTime + 0.02 + (o.delay || 0), typeof x === 'string' ? undefined : o);
+    });
   }
 
   const applyLevel = () => { if (master) master.gain.setTargetAtTime(level(), ctx.currentTime, 0.05); };
