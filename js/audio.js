@@ -5,7 +5,7 @@
 // convolution reverb, so things sound like they are *somewhere* — a room,
 // a valley, a courtyard — instead of inside your head.
 window.Sound = (() => {
-  let ctx = null, master = null, reverb = null, noiseBuf = null, muted = false, volume = 0.8;
+  let ctx = null, master = null, reverb = null, noiseBuf = null, muted = false, volume = 0.5;
   const level = () => (muted ? 0 : volume * 1.1);
   const active = {};
 
