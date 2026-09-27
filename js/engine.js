@@ -365,12 +365,15 @@
     }
     lastDay = show ? S.day : null;
     // Phone: new contact after the envelope, missed call after 3:33.
-    const phoneNew = !!S && ((S.flags.envelope && !S.flags.seenContact) || (S.flags.night && !S.flags.seenCall) || !!S.flags.unreadMsg);
+    const herN = typeof Her !== 'undefined' ? Her.unread() : 0;
+    const phoneNew = !!S && ((S.flags.envelope && !S.flags.seenContact) || (S.flags.night && !S.flags.seenCall) || herN > 0);
     if (phoneNew && el.phoneBadge.hidden) {
       pulseClass($('#btn-phone'), 'buzz', 1000);
       Sound.sfx('ring');
     }
     el.phoneBadge.hidden = !phoneNew;
+    el.phoneBadge.textContent = herN ? (herN > 99 ? '99+' : herN) : '';
+    el.phoneBadge.classList.toggle('count', herN > 0);
     el.pocketBadge.hidden = !(S && pocketItems().length > (S.pocketSeen || 0));
   }
 
@@ -574,6 +577,8 @@
         : 'The wedding was supposed to be tonight. She is still waiting at the water.';
     }
     el.titleMem.textContent = line;
+    const n = mem.her ? mem.her.msgs.filter(m => m.from === 'her' && !m.read).length : 0;
+    $('#title-her').textContent = n ? `${n} unread message${n > 1 ? 's' : ''} from ♥ 秋月` : '';
   }
 
   function begin(state) {
@@ -634,11 +639,7 @@
       { n: FAMILY_CONTACTS.wen, k: 'wen' },
     ].filter(c => !c.k || S.family.includes(c.k));
     let html = '';
-    if (S.msgs && S.msgs.length) {
-      html += `<li class="section">Messages</li>` + S.msgs.slice().reverse().map(m =>
-        `<li><div class="msg"><span class="msg-from">♥ 秋月 <em>${esc(m.at)}</em></span>${esc(m.text)}</div></li>`).join('');
-      S.flags.unreadMsg = false;
-    }
+    if (Her.total()) html += `<li><button class="fav" data-thread="1">Messages · ♥ 秋月<span class="c-sub">${Her.total()} messages</span></button></li>`;
     if (S.flags.envelope) {
       html += `<li class="section">Favorites</li><li><button class="fav" data-bride="1">♥ 秋月<span class="c-sub">${S.flags.night ? 'Missed call · 3:33 AM' : 'wife'}</span></button></li>`;
       html += `<li class="section">All contacts</li>`;
@@ -646,6 +647,7 @@
     html += list.map(c => `<li><button data-name="${esc(c.n)}">${esc(c.n)}</button></li>`).join('');
     el.contacts.innerHTML = html;
     el.phone.hidden = false;
+    if (Her.total()) Her.openThread(); // it always opens on her
     if (S.flags.envelope) S.flags.seenContact = true;
     if (S.flags.night) S.flags.seenCall = true;
     updateHud();
@@ -673,6 +675,7 @@
   el.contacts.addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
+    if (b.dataset.thread) { Her.openThread(); return; }
     call(b.dataset.bride ? '♥ 秋月' : b.dataset.name, !!b.dataset.bride);
   });
   $('#btn-phone').addEventListener('click', e => { e.stopPropagation(); openPhone(); });
@@ -700,6 +703,174 @@
   $('#vol-mute').addEventListener('click', e => { e.stopPropagation(); Sound.toggleMute(); syncVol(); });
   volPop.addEventListener('click', e => e.stopPropagation());
   document.addEventListener('click', e => { if (!e.target.closest('#vol-pop, #btn-mute')) volPop.hidden = true; });
+
+  // ---------------------------------------------------------------- her messages
+  // Qiu-Yue texts you. She never stops. Paying attention feeds her: reading
+  // makes her answer at once, replying sets off a burst, picking up her calls
+  // makes her call more. Ignoring her is the only thing that slowly calms her.
+  // Her messages live in `mem`, so they keep arriving between sessions.
+  const Her = (() => {
+    const st = mem.her = Object.assign({ active: false, msgs: [], attention: 0, lastAt: 0, lastCallAt: 0 }, mem.her || {});
+    const fmt = ms => { const d = new Date(ms); return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
+    const has = k => S && S.family.includes(k);
+    const lost = k => S && S.lost.includes(k);
+
+    const POOLS = {
+      early: ['are you awake', 'the water is warm tonight', 'i can hear the clock in your house', '…', 'you used to hum this',
+        'count the bowls', 'i folded one for you too', "don't let go this time", 'you still have my hand in your pocket', 'is it raining where you are', 'six more days'],
+      needy: ['why don’t you answer', 'you answered me when we were small', 'i know you have your phone', 'the screen lights up your face',
+        'i can see the light from your window', 'are you angry with me', 'please', 'please', 'did i do something wrong', 'you’re reading something else',
+        'look at me', 'i waited twenty years. you can’t wait one minute?'],
+      seen: ['you read it', 'i saw that', 'you’re here', 'don’t close it', 'stay', 'talk to me', 'i knew you’d look', 'hi', 'hi', 'you always look'],
+      replied: ['you answered', 'you answered me', 'i knew you would', 'say it again', 'you do remember', 'we can talk every night now', 'i’ll never stop now'],
+      late: ['i’m at the window', 'it’s so cold in the water', 'our room is ready', 'i set a bowl for you', 'can you hear the frogs? i made them stop', 'i’m in the hall',
+        { t: 'your ama is lying to you', if: () => has('ama') }, { t: 'she folded it crooked. the ingot', if: () => lost('wen') },
+        { t: 'your house is so quiet now', if: () => S && S.lost.length >= 2 }],
+      away: ['where did you go', 'you closed it', 'i can still see you', 'come back', 'it’s dark here', 'are you sleeping', 'i’m counting',
+        'good night husband', 'the water is so still tonight', 'you left me again', 'please come back'],
+    };
+    function pick(name) {
+      const recent = new Set(st.msgs.slice(-8).map(m => m.t));
+      const pool = POOLS[name].map(e => (typeof e === 'string' ? { t: e } : e)).filter(e => (!e.if || e.if()) && !recent.has(e.t));
+      const list = pool.length ? pool : POOLS[name].filter(e => typeof e === 'string').map(t => ({ t }));
+      return list[Math.floor(Math.random() * list.length)].t;
+    }
+
+    const unread = () => st.msgs.filter(m => m.from === 'her' && !m.read).length;
+    const threadOpen = () => !el.phone.hidden && !$('#phone-thread-view').hidden;
+
+    function receive(t, at = Date.now(), quiet = false) {
+      st.msgs.push({ from: 'her', t, at, read: false });
+      if (st.msgs.length > 300) st.msgs.splice(0, st.msgs.length - 300);
+      st.lastAt = at;
+      saveMem();
+      if (quiet) return;
+      if (threadOpen()) { markRead(false); renderThread(); return; }
+      Sound.sfx('buzz');
+      pulseClass($('#btn-phone'), 'buzz', 900);
+      updateHud();
+    }
+
+    // You looked. She knows.
+    function markRead(answer = true) {
+      const n = unread();
+      st.msgs.forEach(m => { if (m.from === 'her' && !m.read) { m.read = true; m.readAt = Date.now(); } });
+      if (n) {
+        st.attention += 2;
+        if (answer) setTimeout(() => receive(pick('seen')), 1800 + Math.random() * 2200);
+      }
+      saveMem();
+      updateHud();
+    }
+
+    function reply(text) {
+      st.msgs.push({ from: 'you', t: text, at: Date.now(), read: true });
+      st.attention += 4;
+      saveMem();
+      renderThread();
+      const n = 2 + Math.floor(Math.random() * 3);
+      for (let k = 0; k < n; k++) setTimeout(() => receive(pick('replied')), 900 + k * (700 + Math.random() * 600));
+    }
+
+    function renderThread() {
+      const box = $('#thread');
+      const lastRead = [...st.msgs].reverse().find(m => m.from === 'her' && m.read);
+      box.innerHTML = st.msgs.slice(-80).map(m =>
+        `<div class="bubble ${m.from}"><span>${esc(m.t)}</span><em>${fmt(m.at)}${m === lastRead ? ' · Seen' : ''}</em></div>`).join('')
+        || '<p class="empty">No messages.</p>';
+      box.scrollTop = box.scrollHeight;
+    }
+
+    // Incoming call: a card slides in while you read. It doesn't stop the story.
+    let ringTimer = null, ringEnd = null;
+    function incoming() {
+      const card = $('#incoming');
+      if (!card.hidden || !started) return;
+      st.lastCallAt = Date.now();
+      card.hidden = false;
+      Sound.sfx('buzz');
+      ringTimer = setInterval(() => Sound.sfx('buzz'), 1300);
+      ringEnd = setTimeout(() => endCall('missed'), 11000);
+    }
+    function endCall(how) {
+      clearInterval(ringTimer); clearTimeout(ringEnd);
+      $('#incoming').hidden = true;
+      if (how === 'missed') { if (Math.random() < 0.6) setTimeout(() => receive(pick('needy')), 2500); }
+      if (how === 'declined') {
+        st.attention += 1;
+        if (Math.random() < 0.35) setTimeout(incoming, 4000);           // she calls straight back
+        else setTimeout(() => receive('why did you do that'), 3000);
+      }
+      if (how === 'answered') {
+        st.attention += 5;
+        el.phone.hidden = false;
+        $('#phone-list-view').hidden = true; $('#phone-thread-view').hidden = true; $('#phone-call-view').hidden = false;
+        $('#call-name').textContent = '♥ 秋月';
+        $('#call-status').textContent = 'Connected · 00:00';
+        $('#call-line').textContent = '';
+        Sound.sfx('whisper');
+        const lines = ['…you picked up.', '…say my name.', '…', '…you hung up first. you always let go first.'];
+        lines.forEach((l, i) => setTimeout(() => { if (!el.phone.hidden) $('#call-line').textContent = l; }, 1400 + i * 2200));
+      }
+      saveMem();
+    }
+
+    // The heartbeat of it: how often she writes, and when she calls.
+    function interval() {
+      const base = S && S.flags.night ? 30000 : 50000;
+      return Math.max(6000, base / (1 + st.attention * 0.2) * (0.7 + Math.random() * 0.6));
+    }
+    let nextAt = Date.now() + 25000;
+    setInterval(() => {
+      if (!started || !S || !S.flags.envelope) return;
+      if (!st.active) { st.active = true; st.lastAt = Date.now(); saveMem(); }
+      if (Date.now() - (st.decayAt || 0) > 40000) {           // ignoring her, slowly, works
+        st.decayAt = Date.now();
+        if (!threadOpen() && st.attention > 0) st.attention -= 1;
+      }
+      if (Date.now() < nextAt) return;
+      nextAt = Date.now() + interval();
+      const u = unread();
+      if (u >= 6 && Math.random() < 0.15) {                  // "A-Wei" "A-Wei" "A-Wei"
+        const n = 3 + Math.floor(Math.random() * 3);
+        for (let k = 0; k < n; k++) setTimeout(() => receive('A-Wei'), k * 900);
+        return;
+      }
+      const tier = u >= 4 && Math.random() < 0.7 ? 'needy' : S.flags.night && Math.random() < 0.5 ? 'late' : 'early';
+      receive(pick(tier));
+      if (st.attention >= 6 && Date.now() - st.lastCallAt > 90000 && Math.random() < 0.25) setTimeout(incoming, 5000);
+    }, 1000);
+
+    // While you were away, she kept writing. One every twenty minutes or so, up to sixty.
+    if (st.active && st.lastAt) {
+      const gap = Date.now() - st.lastAt, every = 20 * 60000;
+      const n = Math.min(60, Math.floor(gap / every));
+      for (let k = 1; k <= n; k++) {
+        const at = st.lastAt + k * every - Math.random() * every * 0.8;
+        receive(k % 7 === 0 ? pick('needy') : pick('away'), at, true);
+      }
+    }
+
+    $('#inc-decline').addEventListener('click', e => { e.stopPropagation(); endCall('declined'); });
+    $('#inc-answer').addEventListener('click', e => { e.stopPropagation(); endCall('answered'); });
+    $('#thread-back').addEventListener('click', e => {
+      e.stopPropagation();
+      $('#phone-thread-view').hidden = true;
+      $('#phone-list-view').hidden = false;
+    });
+    document.querySelectorAll('.quick [data-reply]').forEach(b =>
+      b.addEventListener('click', e => { e.stopPropagation(); reply(b.dataset.reply); }));
+
+    return {
+      unread, total: () => st.msgs.filter(m => m.from === 'her').length, attention: () => st.attention,
+      markRead, renderThread, receive, incoming,
+      openThread() {
+        $('#phone-list-view').hidden = true; $('#phone-call-view').hidden = true; $('#phone-thread-view').hidden = false;
+        renderThread(); markRead();
+      },
+    };
+  })();
+  window.Her = Her; // the story asks about her too
 
   // ---------------------------------------------------------------- panels
   const backlog = [];
@@ -776,7 +947,7 @@
   // 1) The tab title and icon change when you look away.
   const svgIcon = body => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${body}</svg>`);
   const ICON_ENVELOPE = svgIcon('<rect x="6" y="14" width="52" height="36" rx="3" fill="#b3121b"/><path d="M6 16 L32 34 L58 16" fill="none" stroke="#6e070c" stroke-width="3"/><circle cx="32" cy="34" r="5" fill="#d8b454"/>');
-  const ICON_EFFIGY = svgIcon('<ellipse cx="32" cy="34" rx="24" ry="27" fill="#ece6d6"/><path d="M8 30 C8 4 56 4 56 30 C46 18 18 18 8 30Z" fill="#0b0b0e"/><circle cx="19" cy="42" r="6" fill="#e0506a" opacity=".7"/><circle cx="45" cy="42" r="6" fill="#e0506a" opacity=".7"/><ellipse cx="24" cy="33" rx="3" ry="4" fill="#15100d"/><ellipse cx="40" cy="33" rx="3" ry="4" fill="#15100d"/><path d="M25 50 Q32 55 39 50" stroke="#b3102a" stroke-width="3" fill="none"/>');
+  const ICON_EFFIGY = svgIcon('<ellipse cx="32" cy="34" rx="24" ry="27" fill="#d8d0d8"/><path d="M8 30 C8 4 56 4 56 30 C46 18 18 18 8 30Z" fill="#0b0b0e"/><circle cx="19" cy="42" r="6" fill="#e0506a" opacity=".7"/><circle cx="45" cy="42" r="6" fill="#e0506a" opacity=".7"/><path d="M16 33 Q23 27 30 32 Q23 37 16 33Z M34 32 Q41 27 48 33 Q41 37 34 32Z" fill="#fff" stroke="#15100d" stroke-width="1.6"/><path d="M25 50 Q32 55 39 50" stroke="#b3102a" stroke-width="3" fill="none"/>');
   const setIcon = href => { const l = $('#favicon'); if (l) l.href = href; };
   setIcon(ICON_ENVELOPE);
   const AWAY_TITLES = ['她在等你 · she is waiting', '回來 · come back', '...husband?', '七日 · seven days'];
@@ -840,18 +1011,6 @@
     const has = sel => () => !!el.chars.querySelector(sel);
     const after = flag => () => !!(S && S.flags[flag]);
     const all = (...fs) => () => fs.every(f => f());
-    const HER_TEXTS = [
-      'are you awake',
-      'the water is warm tonight',
-      'you still have my hand in your pocket',
-      'i can hear the clock in your house',
-      'i folded one for you too',
-      "don't let go this time",
-      'i’m at the window',
-      '…',
-      'you used to hum this',
-      'count the bowls',
-    ];
 
     const EVENTS = [
       { id: 'knock', w: 3, ok: indoors, run: () => Sound.sfx('knockFar') },
@@ -880,18 +1039,6 @@
       { id: 'doorway', w: 2, ok: inScene('hall'), run: () => World.apparition({ x: 10, y: 360, w: 110, h: 420, ms: 6500, tint: '#0a0d12' }) },
       { id: 'pane', w: 1, ok: inScene('house'), run: () => World.apparition({ x: 290, y: 330, w: 80, h: 160, ms: 6000, tint: '#1b2530' }) },
 
-      // she texts you
-      { id: 'text', w: 2, ok: () => !!(S && S.flags.envelope) && (S.msgs || []).length < HER_TEXTS.length, run() {
-        S.msgs = S.msgs || [];
-        const used = new Set(S.msgs.map(m => m.text));
-        const pool = HER_TEXTS.filter(t => !used.has(t));
-        const d = new Date();
-        S.msgs.push({ text: pool[Math.floor(Math.random() * pool.length)], at: `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}` });
-        S.flags.unreadMsg = true;
-        Sound.sfx('buzz');
-        pulseClass($('#btn-phone'), 'buzz', 900);
-        el.phoneBadge.hidden = false;
-      } },
 
       // the countdown slips a day ahead, just for a moment
       { id: 'seal', w: 1, ok: () => !!(S && S.day > 1), run() {

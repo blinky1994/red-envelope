@@ -81,6 +81,12 @@
     </button>
   </nav>
 
+  <div id="incoming" hidden role="alert">
+    <div class="inc-name">♥ 秋月</div>
+    <div class="inc-sub">incoming call…</div>
+    <div class="inc-btns"><button id="inc-decline" type="button">Decline</button><button id="inc-answer" type="button">Answer</button></div>
+  </div>
+
   <div id="panel" hidden>
     <div class="panel-body" role="dialog" aria-modal="true" aria-labelledby="panel-title">
       <div class="panel-head"><h3 id="panel-title"></h3><button id="panel-close" class="panel-x" aria-label="Close">✕</button></div>
@@ -102,6 +108,15 @@
         <h3>Phone</h3>
         <ul id="contacts"></ul>
       </div>
+      <div id="phone-thread-view" hidden>
+        <div class="thread-head"><button id="thread-back" type="button">‹ Contacts</button><span>♥ 秋月</span></div>
+        <div id="thread" class="thread"></div>
+        <div class="quick">
+          <button type="button" data-reply="Stop.">Stop.</button>
+          <button type="button" data-reply="Who is this?">Who is this?</button>
+          <button type="button" data-reply="Leave me alone.">Leave me alone.</button>
+        </div>
+      </div>
       <div id="phone-call-view" hidden>
         <div class="call-name" id="call-name"></div>
         <div class="call-status" id="call-status"></div>
@@ -115,6 +130,7 @@
     <div class="title-cn">紅包</div>
     <div class="title-en">The Red Envelope</div>
     <div class="title-mem" id="title-mem"></div>
+    <div class="title-her" id="title-her"></div>
     <div class="menu">
       <button class="menu-btn" id="btn-begin">Begin</button>
       <button class="menu-btn" id="btn-continue" hidden>Continue</button>

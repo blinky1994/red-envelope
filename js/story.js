@@ -56,6 +56,7 @@ const SPEAKERS = {
   girl:     { name: '???', cls: 'memory' },
 };
 
+const her = () => window.Her || { unread: () => 0, total: () => 0, attention: () => 0 };
 const REMOVAL_ORDER = ['ama', 'wen', 'mom'];
 const has = (s, k) => s.family.includes(k);
 const got = (s, k) => s.items.includes(k);
@@ -241,7 +242,8 @@ const STORY = {
     bg: 'road', rain: false, chars: ['men'], item: null, ambient: ['drip', 'drone'],
     lines: [
       { if: s => !s.flags.froze, t: "You bow. You don't know why. Your body does it before you decide to." },
-      { who: 'eldest', t: 'Such good manners. She chose well.' },
+      { if: s => !s.flags.froze, who: 'eldest', t: 'Such good manners. She chose well.' },
+      { if: s => s.flags.froze, who: 'eldest', t: 'She chose well.' },
       { beat: 1200 },
       { chars: [], rain: true, ambient: ['rain', 'drone'], sfx: 'rustle', t: 'The rain comes back all at once. When you look up, the grass is empty.' },
       { do: s => { s.flags.accepted = true; }, t: "The envelope is in your jacket pocket. You don't remember putting it there." },
@@ -440,6 +442,8 @@ const STORY = {
       { t: 'You turn the photo over. In a child’s handwriting: 阿偉 和 ——' },
       { slow: true, t: '"A-Wei and—." The second name has been scribbled out so hard the pen went through the paper.' },
       { item: null, do: give('photo'), t: "You put it back in the drawer. You close the drawer. You wedge the chair under it, which is stupid, and you know it's stupid, and you do it anyway." },
+      { if: () => her().unread() >= 3, t: () => `Your phone buzzes on the desk. ${her().unread()} unread. You turn it face down. It keeps buzzing, face down, until it has walked itself to the edge of the desk.` },
+      { if: () => her().unread() < 3 && her().total() >= 3, t: 'Your phone lights up on the desk. You have read every one of her messages. You wish you hadn’t.' },
       'You lie down. The frogs sing. The clock ticks. Nothing is near.',
       { slow: true, t: 'Nothing is near.' },
     ],
@@ -455,6 +459,7 @@ const STORY = {
       { fx: 'dark', ambient: ['drip'], t: "You're awake. You don't know what woke you." },
       { if: () => { const h = new Date().getHours(); return h >= 0 && h < 5; }, who: 'bride', t: "It's late where you are, too. Isn't it." },
       { beat: 1600 },
+      { if: () => her().total() >= 5, t: () => her().unread() ? `Your phone is lit up on the nightstand. ${her().unread()} new messages. You don't look. You've learned not to.` : 'Your phone is lit up on the nightstand. A new message, already marked as read. You never opened it.' },
       'It takes you a long moment to understand what is wrong.',
       { slow: true, t: 'The frogs have stopped.' },
       { beat: 1800 },
@@ -509,6 +514,9 @@ const STORY = {
       'You look down at your own hand.',
       { fx: 'red', slow: true, t: 'Red thread. Knotted tight around your little finger. The knot is still wet.' },
       { if: s => got(s, 'charm'), who: 'bride', t: 'Your grandmother always did like to get in the way.' },
+      { if: () => her().attention() >= 8, who: 'bride', t: 'You always look when I write to you. You never looked at me like that when we were small.' },
+      { if: () => her().attention() < 8 && her().unread() >= 5, who: 'bride', t: "You didn't read my messages." },
+      { if: () => her().attention() < 8 && her().unread() >= 5, who: 'bride', slow: true, t: "That's all right. I'll keep writing." },
       { who: 'bride', t: 'Seven days is so long. I waited twenty years. I can wait seven days.' },
       { who: 'bride', sfx: 'whisper', do: s => { s.flags.named = true; }, slow: true, t: "It's me. Qiu-Yue. Don't you remember? You held my hand so tight." },
       { who: 'bride', slow: true, t: 'And then you let go.' },
@@ -621,6 +629,8 @@ const STORY = {
       { if: s => has(s, 'mom') && !has(s, 'wen'), slow: true, t: 'She sets out [[three|two]] bowls. Just two. Like always.' },
       { if: s => s.family.length === 0, t: 'The house is very quiet. You make breakfast. [[Four bowls.|One bowl.]]' },
       { if: s => s.family.length === 0, slow: true, t: "You're sure there should be more. You can't think who for." },
+
+      { if: () => her().unread() >= 8, t: () => `Your phone says ${her().unread()} unread messages. You don't need to open it to know who they're from.` },
 
       // The keepsake outlives the memory.
       { if: s => !has(s, 'wen') && got(s, 'ingot'), item: 'ingot', t: 'In your pocket there is a folded gold paper ingot. Careful folds, a little crooked. A child made this.' },

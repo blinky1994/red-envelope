@@ -569,7 +569,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 /* the living look down at their food... until they don't */
 .char .eyes { transform: translate(-2px, 3px); transition: transform 1.6s ease-in-out; }
-.char.watching .eyes { transform: translate(0, -1px); }
+.char .eyes { transition: transform 1.6s ease-in-out, opacity 2.4s ease-in-out; }
+/* when they look at you, their pupils go */
+.char.watching .eyes { transform: translate(0, -1px); opacity: 0; }
 
 /* effigy heads tilt while you read */
 .char .effhead { transform-box: fill-box; transform-origin: 50% 100%; transition: transform 6s ease-in-out; }
@@ -579,3 +581,46 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .msg { padding: 10px; border-bottom: 1px solid #1c1c20; color: #e8e0e0; font-size: .9rem; }
 .msg-from { display: block; margin-bottom: 3px; font-size: .72rem; color: #ff5a5a; }
 .msg-from em { font-style: normal; color: #777; margin-left: 6px; }
+
+/* ---------- her thread ---------- */
+#phone-thread-view { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+#phone-thread-view[hidden] { display: none; }
+.thread-head { display: flex; align-items: center; justify-content: space-between; padding: 0 6px 10px; border-bottom: 1px solid #1c1c20; color: #ff5a5a; font-size: .95rem; }
+.thread-head button { color: #8a8a90; font-size: .85rem; }
+.thread { flex: 1; overflow-y: auto; padding: 10px 4px; display: flex; flex-direction: column; gap: 6px; }
+.bubble { max-width: 80%; display: flex; flex-direction: column; }
+.bubble span { padding: 7px 11px; border-radius: 14px; font-size: .92rem; line-height: 1.35; }
+.bubble em { font-style: normal; font-size: .62rem; color: #6a6a70; margin: 2px 6px 0; }
+.bubble.her { align-self: flex-start; }
+.bubble.her span { background: #2a1416; color: #f0dede; border-bottom-left-radius: 4px; }
+.bubble.you { align-self: flex-end; align-items: flex-end; }
+.bubble.you span { background: #1e2a3a; color: #dde6f0; border-bottom-right-radius: 4px; }
+.quick { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid #1c1c20; }
+.quick button { flex: 1; padding: 7px 4px; border-radius: 12px; background: #16161a; color: #bbb; font-size: .78rem; }
+.quick button:hover { background: #222228; color: #fff; }
+
+/* ---------- she's calling ---------- */
+#incoming {
+  position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+  z-index: 25; width: min(22rem, calc(100vw - 32px));
+  padding: .9rem 1.1rem; border-radius: 18px;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: rgba(14,14,16,.96); border: 1px solid #2a2a2e; box-shadow: 0 16px 50px rgba(0,0,0,.8);
+  animation: incomingIn .5s ease-out both, incomingShiver 1.3s ease-in-out infinite .5s;
+}
+@keyframes incomingIn { from { opacity: 0; transform: translate(-50%, -30px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes incomingShiver { 0%, 100% { margin-left: 0; } 10% { margin-left: -2px; } 20% { margin-left: 2px; } 30% { margin-left: 0; } }
+.inc-name { color: #ff6a6a; font-size: 1.1rem; }
+.inc-sub { color: #888; font-size: .8rem; margin: 2px 0 10px; }
+.inc-btns { display: flex; gap: 8px; }
+.inc-btns button { flex: 1; padding: 8px; border-radius: 12px; font-size: .85rem; }
+#inc-decline { background: #5a1418; color: #fff; }
+#inc-answer { background: #1c3a24; color: #fff; }
+
+/* ---------- unread count ---------- */
+.badge.count {
+  top: 2px; right: 6px; width: auto; min-width: 1.15rem; height: 1.15rem; padding: 0 .3rem;
+  border-radius: 999px; font-size: .62rem; line-height: 1.15rem; color: #fff; font-weight: 700;
+  font-family: system-ui, sans-serif; text-align: center;
+}
+.title-her { min-height: 1.3em; margin: -1rem 0 1.4rem; font-family: system-ui, sans-serif; font-size: .85rem; letter-spacing: .05em; color: #ff5a5a; }

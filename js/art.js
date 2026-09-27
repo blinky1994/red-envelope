@@ -342,9 +342,10 @@ window.ART = (() => {
       <path d="M-30 70 Q0 50 30 70" stroke="#d8b454" stroke-width="5" fill="none"/>
       <path d="M-40 200 L40 200 L36 214 L-36 214Z" fill="#6a5030" stroke="#15100d" stroke-width="2"/>
       <rect x="-3" y="30" width="6" height="30" fill="#b69a62"/>
-      <ellipse cx="0" cy="10" rx="30" ry="34" fill="#ece6d6" stroke="#15100d" stroke-width="2.5"/>
+      <ellipse cx="0" cy="10" rx="30" ry="34" fill="#d8d0d8" stroke="#15100d" stroke-width="2.5"/>
       <circle cx="-15" cy="22" r="8" fill="#e0506a" opacity=".6"/><circle cx="15" cy="22" r="8" fill="#e0506a" opacity=".6"/>
-      <ellipse cx="-10" cy="6" rx="3.5" ry="4.5" fill="#15100d"/><ellipse cx="10" cy="6" rx="3.5" ry="4.5" fill="#15100d"/>
+      <path d="M-17 6 Q-10 0 -3 5 Q-10 10 -17 6Z M3 5 Q10 0 17 6 Q10 10 3 5Z" fill="#f6f3f3" stroke="#15100d" stroke-width="1.5"/>
+      <path d="M-18 6 Q-10 -2 -2 5 M2 5 Q10 -2 18 6" stroke="#15100d" stroke-width="2.2" fill="none"/>
       <path d="M-8 32 Q0 38 8 32" stroke="#b3102a" stroke-width="3" fill="none"/>
       ${girl ? '<circle cx="-24" cy="-18" r="11" fill="#0b0b0e"/><circle cx="24" cy="-18" r="11" fill="#0b0b0e"/><path d="M-28 0 C-28 -34 28 -34 28 0 C18 -16 -18 -16 -28 0Z" fill="#0b0b0e"/>'
              : '<path d="M-28 0 C-28 -34 28 -34 28 0 C14 -12 -14 -12 -28 0Z" fill="#0b0b0e"/><circle cx="0" cy="-26" r="7" fill="#0b0b0e"/>'}
@@ -489,15 +490,21 @@ window.ART = (() => {
     <path d="M186 262 q14 5 28 0" stroke="#8a3a2a" stroke-width="3" fill="none" stroke-linecap="round"/>
     <ellipse cx="170" cy="246" rx="12" ry="6" fill="#d8907a" opacity=".2"/><ellipse cx="230" cy="246" rx="12" ry="6" fill="#d8907a" opacity=".2"/>`;
 
-  // An effigy face: chalk paper, rouge coins, ink dots, the painted smile.
+  // An effigy face: grey-lavender paper, blank white eyes with no pupils,
+  // a heavy painted lid, sharp brows, a small dark mouth that never moves.
   const effigyFace = (smileW = 16, tilt = 0) => `
     <g transform="rotate(${tilt} 200 230)">
-      <ellipse cx="200" cy="228" rx="58" ry="64" fill="#ece6d6" stroke="${INK}" stroke-width="3"/>
-      <circle cx="166" cy="252" r="17" fill="#e0506a" opacity=".6"/><circle cx="234" cy="252" r="17" fill="#e0506a" opacity=".6"/>
-      <path d="M160 204 q14 -9 28 -2 M212 202 q14 -7 28 2" stroke="${INK}" stroke-width="2.5" fill="none"/>
-      <ellipse cx="176" cy="222" rx="6" ry="7.5" fill="${INK}"/><ellipse cx="224" cy="222" rx="6" ry="7.5" fill="${INK}"/>
-      <path d="M${200 - smileW} 268 Q200 ${270 + smileW * 0.7} ${200 + smileW} 268" stroke="#b3102a" stroke-width="5" fill="none" stroke-linecap="round"/>
-      <path d="M${200 - smileW * 0.5} 270 Q200 ${272 + smileW * 0.3} ${200 + smileW * 0.5} 270" fill="#b3102a"/>
+      <ellipse cx="200" cy="228" rx="58" ry="64" fill="#d8d0d8" stroke="${INK}" stroke-width="3"/>
+      <ellipse cx="200" cy="240" rx="46" ry="46" fill="#e4dee4" opacity=".55"/>
+      <circle cx="166" cy="256" r="14" fill="#b84a66" opacity=".3"/><circle cx="234" cy="256" r="14" fill="#b84a66" opacity=".3"/>
+      <path d="M154 204 Q170 190 194 205 M206 205 Q230 190 246 204" stroke="${INK}" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+      <path d="M160 229 Q177 236 194 226 M206 226 Q223 236 240 229" stroke="#8a6a86" stroke-width="3" fill="none" opacity=".35"/>
+      <path d="M160 222 Q177 209 195 220 Q177 230 160 222Z" fill="#f6f3f3" stroke="${INK}" stroke-width="1.8"/>
+      <path d="M205 220 Q223 209 240 222 Q223 230 205 220Z" fill="#f6f3f3" stroke="${INK}" stroke-width="1.8"/>
+      <path d="M157 221 Q177 205 197 219 M203 219 Q223 205 243 221" stroke="${INK}" stroke-width="3.6" fill="none" stroke-linecap="round"/>
+      <path d="M200 232 l-3 15 l5 1" stroke="#8a7a86" stroke-width="1.8" fill="none"/>
+      <path d="M${200 - smileW} 269 Q200 ${272 + smileW * 0.45} ${200 + smileW} 269" stroke="#5e2440" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <path d="M${200 - smileW * 0.45} 270 Q200 ${274 + smileW * 0.2} ${200 + smileW * 0.45} 270Z" fill="#6e2a48"/>
     </g>`;
 
   // Bamboo showing through torn paper.
@@ -584,7 +591,7 @@ window.ART = (() => {
       ${tear(tearAt[0], tearAt[1])}
       <ellipse cx="60" cy="705" rx="15" ry="12" fill="#ece6d6" stroke="${INK}" stroke-width="2"/><ellipse cx="340" cy="705" rx="15" ry="12" fill="#ece6d6" stroke="${INK}" stroke-width="2"/>
       <g transform="rotate(${tilt} 200 230)"><g class="effhead">
-        ${effigyFace(24, 0)}
+        ${effigyFace(18, 0)}
         <path d="M142 214 C136 146 264 146 258 214 C246 180 154 180 142 214Z" fill="#0b0b0e" stroke="${INK}" stroke-width="3"/>
         <path d="M200 166 L200 186" stroke="#2a2a30" stroke-width="2"/>
         <path d="M150 196 l-2 30 M252 196 l2 26" stroke="#0b0b0e" stroke-width="5" stroke-linecap="round"/>
