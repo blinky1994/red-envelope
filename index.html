@@ -66,6 +66,18 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l3 3v15H6z"/><path d="M9 10h6M9 14h6M9 18h4"/></svg>
       <span class="side-label">Log</span>
     </button>
+    <button id="btn-skip" class="side-btn" title="Fast-forward read text (F)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l7 6-7 6zM13 6l7 6-7 6z"/></svg>
+      <span class="side-label">Skip</span>
+    </button>
+    <button id="btn-save" class="side-btn" title="Quick save (Q)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></svg>
+      <span class="side-label">Save</span>
+    </button>
+    <button id="btn-load" class="side-btn" title="Load (R quick-loads)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v4h4"/></svg>
+      <span class="side-label">Load</span>
+    </button>
     <button id="btn-mute" class="side-btn" title="Sound (M)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9.5h4l5-4v13l-5-4H4z"/><path class="wave" d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/></svg>
       <span class="side-label">Sound</span>
@@ -129,6 +141,7 @@
     <div class="menu">
       <button class="menu-btn" id="btn-begin">Begin</button>
       <button class="menu-btn" id="btn-continue" hidden>Continue</button>
+      <button class="menu-btn" id="btn-quickload" hidden>Load quick save</button>
     </div>
     <div class="title-note">Headphones. Lights off. Don't pick anything up off the road.</div>
   </div>
@@ -140,6 +153,7 @@
     <div class="menu"><button class="menu-btn" id="btn-totitle">Return</button></div>
   </div>
 
+  <div id="toast" hidden></div>
   <div id="sub" class="layer"></div>
 </div>
 

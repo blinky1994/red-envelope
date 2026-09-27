@@ -20,7 +20,7 @@ python -m http.server 8347
 
 Then open <http://localhost:8347>. It's best with **headphones, lights off**.
 
-**Controls:** click, Space or Enter to advance · 1–9 to pick a choice · **P** phone · **I** pocket · **L** log · **M** sound · **Esc** menu.
+**Controls:** click, Space or Enter to advance · 1–9 to pick a choice · **F** fast-forward read text · **Q** quick save · **R** quick load · **P** phone · **I** pocket · **L** log · **M** mute · **Esc** menu (text speed, game speed).
 
 ## What's in it
 

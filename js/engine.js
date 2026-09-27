@@ -13,6 +13,8 @@
   const BASE_TITLE = document.title;
   const NUMERALS = ['〇', '一', '二', '三', '四', '五', '六', '七'];
   const SAVE_KEY = 'redenvelope.save';
+  const QUICK_KEY = 'redenvelope.quick';
+  const SETTINGS_KEY = 'redenvelope.settings';
   const MEM_KEY = 'redenvelope.mem';
 
   // localStorage can throw (private mode, blocked storage) — the game must still run.
@@ -23,7 +25,13 @@
   };
 
   // `mem` survives across playthroughs; the game uses it to remember you.
-  const mem = Object.assign({ plays: 0, leftEnvelope: false, tabLeaves: 0, finished: 0 }, store.get(MEM_KEY) || {});
+  const mem = Object.assign({ plays: 0, leftEnvelope: false, tabLeaves: 0, finished: 0, seen: {} }, store.get(MEM_KEY) || {});
+
+  // Player settings. Text speed is ms per character (0 = instant); pace
+  // speeds up the silent beats and pauses between lines.
+  const TEXT_SPEED = { slow: 38, normal: 24, fast: 11, instant: 0 };
+  const settings = Object.assign({ textSpeed: 'normal', pace: 1 }, store.get(SETTINGS_KEY) || {});
+  const saveSettings = () => store.set(SETTINGS_KEY, settings);
   const saveMem = () => store.set(MEM_KEY, mem);
 
   const newState = () => ({ node: null, day: null, family: ['ama', 'mom', 'wen'], lost: [], refusals: 0, flags: {}, items: [] });
@@ -354,15 +362,16 @@
     });
   }
 
-  function applyScene(o) {
+  const LASTING_FX = ['red', 'red-off', 'dark', 'darker', 'dark-off'];
+  function applyScene(o, silent = false) {
     if ('bg' in o) World.setScene(val(o.bg));
     if ('rain' in o) World.setRain(val(o.rain));
-    if ('chars' in o) setChars(val(o.chars), !!o.cut);
+    if ('chars' in o) setChars(val(o.chars), silent || !!o.cut);
     if (o.redraw) World.redraw();
     if ('item' in o) setItem(val(o.item));
     if ('ambient' in o) Sound.ambient(val(o.ambient));
-    if ('fx' in o) doFx(val(o.fx));
-    if ('sfx' in o) Sound.sfx(val(o.sfx));
+    if ('fx' in o) doFx(silent ? [].concat(val(o.fx)).filter(f => LASTING_FX.includes(f)) : val(o.fx));
+    if ('sfx' in o && !silent) Sound.sfx(val(o.sfx));
   }
 
   let lastDay = null;
@@ -389,11 +398,17 @@
   }
 
   // ---------------------------------------------------------------- flow
-  function goto(id) {
+  let nodeSnap = null;   // the state as this scene began: quick saves replay from here
+  let fastTo = null;     // when restoring, silently replay lines up to this index
+  let lastShown = 0;     // index of the line currently on screen
+  function goto(id, resumeAt = null) {
     node = STORY[id];
     if (!node) { console.error('Missing story node:', id); return; }
     S.node = id;
     store.set(SAVE_KEY, S);
+    nodeSnap = JSON.stringify(S);
+    fastTo = resumeAt;
+    saveMem();
     hideBig();
     el.fx.classList.remove('red');
     el.stage.classList.remove('dark', 'darker');
@@ -410,6 +425,13 @@
       let line = lines[lineIdx++];
       if (typeof line === 'string') line = { t: line };
       if (line.if && !line.if(S, mem)) continue;
+      if (fastTo !== null && lineIdx - 1 < fastTo) {   // restoring a quick save: replay silently
+        if (line.do) line.do(S, mem);
+        applyScene(line, true);
+        continue;
+      }
+      fastTo = null;
+      lastShown = lineIdx - 1;
       if (line.do) { line.do(S, mem); saveMem(); }
       applyScene(line);
       updateHud();
@@ -420,11 +442,13 @@
         el.textbox.hidden = true;
         hideBig();
         busy = true;
-        setTimeout(() => { busy = false; next(); }, line.beat);
+        setTimeout(() => { busy = false; next(); }, pause(line.beat));
         return;
       }
-      if (line.wait) { busy = true; setTimeout(() => { busy = false; next(); }, line.wait); return; }
+      if (line.wait) { busy = true; setTimeout(() => { busy = false; next(); }, pause(line.wait)); return; }
     }
+    fastTo = null;
+    lastShown = lines.length;
     endNode();
   }
 
@@ -446,8 +470,14 @@
     if (style) el.text.classList.add(style);
     backlog.push({ whoKey: who, who: el.speaker.textContent, text: resolveText(text), cls: style || (sp ? sp.cls || '' : 'narr') });
     if (backlog.length > 120) backlog.shift();
+    // Remember which lines have been read, so fast-forward knows where to stop.
+    curKey = `${S.node}:${lineIdx - 1}`;
+    curSeen = !!mem.seen[curKey];
+    mem.seen[curKey] = 1;
     // Slow lines are for dread, not for waiting: long ones speed up to finish in ~4s.
-    typeOut(text, slow ? Math.max(30, Math.min(70, 4200 / resolveText(text).length)) : 24);
+    const base = TEXT_SPEED[settings.textSpeed] ?? 24;
+    const speed = base === 0 ? 0 : slow ? Math.max(30, Math.min(70, 4200 / resolveText(text).length)) * base / 24 : base;
+    typeOut(text, speed);
   }
 
   // [[wrong|right]] in a line: the narrator types the wrong thing, hesitates,
@@ -474,6 +504,7 @@
     el.text.textContent = '';
     el.advance.classList.remove('show');
     typing = true;
+    if (speed === 0) { finishTyping(); return; }
     let shown = '', i = 0;
     const step = () => {
       const op = ops[i++];
@@ -504,7 +535,7 @@
     el.big.classList.add('show');
     bigShowing = true;
     bigLock = true;
-    setTimeout(() => { bigLock = false; }, 700);
+    setTimeout(() => { bigLock = false; }, pause(700));
   }
   function hideBig() {
     if (!bigShowing) return;
@@ -558,7 +589,7 @@
 
   function advance() {
     if (!started || busy || awaitingChoice || overlayOpen()) return;
-    if (typing) { if (!unskippable) finishTyping(); return; }
+    if (typing) { if (!unskippable || skipping) finishTyping(); return; }
     if (bigShowing) {
       if (bigLock) return;
       hideBig();
@@ -577,6 +608,9 @@
     el.countdown.hidden = true;
     const save = store.get(SAVE_KEY);
     el.btnContinue.hidden = !(save && save.node && STORY[save.node]);
+    const quick = store.get(QUICK_KEY);
+    $('#btn-quickload').hidden = !(quick && quick.snap && STORY[quick.snap.node]);
+    setSkip(false);
     let line = '';
     if (mem.plays > 0) line = 'You came back.';
     if (mem.leftEnvelope) line = 'You tried to leave it on the road. It remembers.';
@@ -592,8 +626,10 @@
     $('#title-her').textContent = n ? `${n} unread message${n > 1 ? 's' : ''} from ♥ 秋月` : '';
   }
 
-  function begin(state) {
+  function begin(state, resumeAt = null) {
     Sound.init();
+    closeOverlays();
+    setSkip(false);
     S = state;
     started = true;
     lastDay = null;
@@ -603,7 +639,8 @@
     el.sidebar.hidden = false;
     el.chars.innerHTML = '';
     setItem(null);
-    goto(S.node || 'intro');
+    el.fx.classList.remove('red');
+    goto(S.node || 'intro', resumeAt);
   }
 
   const DAY_MS = 86400000;
@@ -926,17 +963,40 @@
     const c = $('#panel-content');
     c.scrollTop = c.scrollHeight;
   }
+  const seg = (key, opts) => `<div class="seg" data-set="${key}">${opts.map(([v, label]) =>
+    `<button type="button" data-v="${v}" class="${String(settings[key]) === String(v) ? 'on' : ''}">${label}</button>`).join('')}</div>`;
   function openMenu() {
     openPanel('Menu', `<div class="menu-panel">
+      <div class="setting"><span>Text speed</span>${seg('textSpeed', [['slow', 'Slow'], ['normal', 'Normal'], ['fast', 'Fast'], ['instant', 'Instant']])}</div>
+      <div class="setting"><span>Game speed</span>${seg('pace', [[1, '1×'], [1.5, '1.5×'], [2, '2×'], [3, '3×']])}</div>
       <button class="menu-btn" data-act="resume">Resume</button>
       <button class="menu-btn" data-act="title">Return to title</button>
-      <p class="empty">Progress is saved at the start of every scene.</p></div>`);
+      <p class="empty">F fast-forward · Q quick save · R quick load · P phone · I pocket · L log · M mute</p></div>`);
+  }
+  // Load: your quick save, or the automatic save from the start of the scene.
+  function openLoad() {
+    const quick = store.get(QUICK_KEY), auto = store.get(SAVE_KEY);
+    const when = t => new Date(t).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    const slot = (act, title, sub, ok) => `<div class="save-slot"><div><h4>${title}</h4><p>${sub}</p></div>
+      <button class="menu-btn" data-act="${act}" ${ok ? '' : 'disabled'}>Load</button></div>`;
+    openPanel('Load', slot('loadquick', 'Quick save', quick ? `${esc(when(quick.at))} · “${esc(quick.preview)}”` : 'Empty. Press Save or Q during play.', !!quick)
+      + slot('loadauto', 'Start of scene', auto && auto.node ? 'Saved automatically when the current scene began.' : 'Empty.', !!(auto && auto.node)));
   }
   $('#panel-content').addEventListener('click', e => {
+    const opt = e.target.closest('.seg button');
+    if (opt) {
+      const key = opt.parentElement.dataset.set;
+      settings[key] = key === 'pace' ? Number(opt.dataset.v) : opt.dataset.v;
+      saveSettings();
+      opt.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === opt));
+      return;
+    }
     const b = e.target.closest('[data-act]');
     if (!b) return;
     closeOverlays();
     if (b.dataset.act === 'title') showTitle();
+    if (b.dataset.act === 'loadquick') quickLoad();
+    if (b.dataset.act === 'loadauto') { const a = store.get(SAVE_KEY); if (a) begin(Object.assign(newState(), a)); }
   });
   $('#btn-pocket').addEventListener('click', e => { e.stopPropagation(); openPocket(); });
   $('#btn-log').addEventListener('click', e => { e.stopPropagation(); openLog(); });
@@ -1085,6 +1145,57 @@
   })();
   window.__unease = Unease; // for playtesting: __unease.fire('glance')
 
+  // ---------------------------------------------------------------- saving, fast-forward
+  let curKey = '', curSeen = false, skipping = false, toastTimer = null;
+  const pause = ms => (skipping ? 40 : ms / (settings.pace || 1));
+
+  function toast(msg) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.hidden = true; }, 1800);
+  }
+
+  // A quick save is the scene's starting state plus how far into it you were.
+  // Loading replays the lines you'd already read silently, so nothing that
+  // happened (a refusal, a keepsake) is applied twice.
+  function quickSave() {
+    if (!started || !nodeSnap) return;
+    const preview = awaitingChoice ? 'A choice' : bigShowing ? el.big.innerText.split('\n')[0] : resolveText(fullText || '');
+    store.set(QUICK_KEY, { snap: JSON.parse(nodeSnap), idx: awaitingChoice ? Infinity : lastShown, at: Date.now(),
+      preview: preview.length > 70 ? preview.slice(0, 67) + '…' : preview });
+    toast('Saved');
+  }
+  function quickLoad() {
+    const q = store.get(QUICK_KEY);
+    if (!q || !q.snap) return;
+    begin(Object.assign(newState(), q.snap), q.idx === null ? Infinity : q.idx);
+    toast('Loaded');
+  }
+
+  // Fast-forward: races through lines you've already read, stops at anything
+  // new and at every choice.
+  function setSkip(on) {
+    skipping = !!on && started;
+    $('#btn-skip').classList.toggle('active', skipping);
+  }
+  setInterval(() => {
+    if (!skipping) return;
+    if (!started || awaitingChoice || overlayOpen() || !el.end.hidden) { setSkip(false); return; }
+    if (busy) return;
+    if (bigShowing) { bigLock = false; advance(); return; }
+    if (el.textbox.hidden) return;
+    if (!curSeen) { setSkip(false); toast('New text'); return; }
+    if (typing) finishTyping();
+    advance();
+  }, 70);
+
+  $('#btn-skip').addEventListener('click', e => { e.stopPropagation(); setSkip(!skipping); });
+  $('#btn-save').addEventListener('click', e => { e.stopPropagation(); quickSave(); });
+  $('#btn-load').addEventListener('click', e => { e.stopPropagation(); openLoad(); });
+  $('#btn-quickload').addEventListener('click', () => { mem.plays++; saveMem(); quickLoad(); });
+
   // ---------------------------------------------------------------- input
   el.stage.addEventListener('click', e => {
     resetIdle();
@@ -1101,6 +1212,9 @@
     if (key === 'i') { openPocket(); return; }
     if (key === 'l') { openLog(); return; }
     if (key === 'm') { Sound.toggleMute(); syncVol(); return; }
+    if (key === 'f') { setSkip(!skipping); return; }
+    if (key === 'q') { quickSave(); return; }
+    if (key === 'r') { if (store.get(QUICK_KEY)) quickLoad(); return; }
     if (e.key === ' ' || e.key === 'Enter') {
       if (document.activeElement && document.activeElement.classList.contains('choice')) return;
       e.preventDefault();

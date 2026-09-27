@@ -624,3 +624,26 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 /* an instant change: no fade, no settling; it was always like this */
 .char.instant { animation: none; }
+
+/* ---------- skip, save, settings ---------- */
+.side-btn.active { color: #fff; background: rgba(140,10,16,.75); border-color: var(--red-hot); }
+.side-btn.active svg { animation: skipPulse .6s linear infinite; }
+@keyframes skipPulse { 50% { transform: translateX(2px); } }
+#toast {
+  position: absolute; top: 18px; left: 50%; transform: translateX(-50%); z-index: 45;
+  padding: .45rem 1rem; font-size: .8rem; letter-spacing: .25em; text-transform: uppercase;
+  color: var(--ink); background: rgba(8,4,4,.9); border: 1px solid rgba(179,18,27,.5);
+  animation: fadeIn .2s both;
+}
+.setting { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.setting > span { font-size: .8rem; letter-spacing: .2em; text-transform: uppercase; color: var(--dim); }
+.seg { display: flex; border: 1px solid rgba(179,18,27,.45); }
+.seg button { padding: .4rem .7rem; font-size: .85rem; color: var(--dim); border-left: 1px solid rgba(179,18,27,.25); }
+.seg button:first-child { border-left: 0; }
+.seg button.on { color: #fff; background: rgba(140,10,16,.7); }
+.seg button:hover:not(.on) { color: var(--ink); }
+.save-slot { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+.save-slot h4 { font-weight: 600; }
+.save-slot p { color: #cfc6b8; font-style: italic; font-size: .9rem; }
+.save-slot .menu-btn { padding: .5em 1em; font-size: .85rem; letter-spacing: .2em; }
+.menu-btn:disabled { opacity: .35; cursor: default; }
