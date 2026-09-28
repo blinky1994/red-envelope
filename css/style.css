@@ -322,7 +322,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 @keyframes buzz { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-3px) rotate(-4deg); } 75% { transform: translateX(3px) rotate(4deg); } }
 
 /* ---------- panels (pocket / log / menu) ---------- */
-#panel { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; background: rgba(0,0,0,.7); padding: 16px; }
+#panel { position: absolute; inset: 0; z-index: 42; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; background: rgba(0,0,0,.7); padding: 16px; }
 .panel-body {
   width: min(36rem, 100%);
   max-height: min(42rem, 86vh);
@@ -335,7 +335,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .panel-head h3 { font-weight: 400; letter-spacing: .3em; text-transform: uppercase; font-size: .95rem; color: var(--red-hot); }
 .panel-x { width: 32px; height: 32px; color: var(--dim); }
 .panel-x:hover { color: var(--ink); }
-#panel-content { overflow-y: auto; padding: 12px 18px 18px; }
+#panel-content { overflow-y: auto; padding: 12px 18px 18px; scrollbar-width: thin; scrollbar-color: rgba(179,18,27,.55) transparent; }
 .pocket-item { display: grid; grid-template-columns: 6rem 1fr; gap: 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
 .pocket-item svg { width: 6rem; height: 4.5rem; }
 .pocket-item h4 { font-weight: 600; margin-bottom: .2em; }
@@ -642,10 +642,25 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .seg button:first-child { border-left: 0; }
 .seg button.on { color: #fff; background: rgba(140,10,16,.7); }
 .seg button:hover:not(.on) { color: var(--ink); }
-.save-slot { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+.save-slot { display: flex; align-items: center; gap: .9rem; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+.slot-seal {
+  flex: none; display: grid; place-items: center; width: 2.6rem; height: 2.6rem;
+  font-family: 'Noto Serif TC', serif; font-weight: 900; font-size: 1.5rem; color: #fff3e6;
+  background: var(--red); box-shadow: 0 0 12px rgba(179,18,27,.45);
+}
+.save-slot.is-empty .slot-seal { background: transparent; border: 1px dashed rgba(179,18,27,.35); box-shadow: none; color: var(--dim); }
+.slot-info { flex: 1; min-width: 0; }
+.slot-info .slot-no { display: block; font-size: .68rem; letter-spacing: .22em; text-transform: uppercase; color: var(--red-hot); }
 .save-slot h4 { font-weight: 600; }
-.save-slot p { color: #cfc6b8; font-style: italic; font-size: .9rem; }
+.save-slot.is-empty h4 { font-weight: 400; font-style: italic; color: var(--dim); }
+.save-slot p { color: #cfc6b8; font-style: italic; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slot-info > small:last-child:not(.slot-no) { font-size: .75rem; color: var(--dim); letter-spacing: .06em; }
+.slot-actions { flex: none; display: flex; align-items: center; gap: .3rem; }
 .save-slot .menu-btn { padding: .5em 1em; font-size: .85rem; letter-spacing: .2em; }
+.save-slot .menu-btn.confirm, .slot-del.confirm { background: rgba(110,8,14,.85); border-color: var(--red-hot); color: #fff; letter-spacing: .08em; }
+.slot-del { min-width: 2rem; height: 2rem; padding: 0 .4rem; color: var(--dim); font-size: .85rem; border: 1px solid transparent; }
+.slot-del:hover { color: var(--ink); border-color: rgba(179,18,27,.45); }
+.slot-del.spacer { visibility: hidden; }
 .menu-btn:disabled { opacity: .35; cursor: default; }
 
 /* pitch black: the scene is gone, only the words and the sounds are left */

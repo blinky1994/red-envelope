@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=9">
 <link id="favicon" rel="icon" href="data:,">
 </head>
 <body>
@@ -82,7 +82,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6l7 6-7 6zM13 6l7 6-7 6z"/></svg>
       <span class="side-label">Skip</span>
     </button>
-    <button id="btn-save" class="side-btn" title="Quick save (Q)">
+    <button id="btn-save" class="side-btn" title="Save (Q quick-saves)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></svg>
       <span class="side-label">Save</span>
     </button>
@@ -153,7 +153,7 @@
     <div class="menu">
       <button class="menu-btn" id="btn-begin">Begin</button>
       <button class="menu-btn" id="btn-continue" hidden>Continue</button>
-      <button class="menu-btn" id="btn-quickload" hidden>Load quick save</button>
+      <button class="menu-btn" id="btn-load-title" hidden>Load</button>
     </div>
     <div class="title-note">Headphones. Lights off. Don't pick anything up off the road.</div>
   </div>
@@ -177,9 +177,10 @@
   <div id="sub" class="layer"></div>
 </div>
 
-<script src="js/audio.js"></script>
-<script src="js/art.js"></script>
-<script src="js/story.js"></script>
-<script src="js/engine.js"></script>
+<!-- Bump ?v= whenever these files change, so a cached page never mixes old and new files. -->
+<script src="js/audio.js?v=9"></script>
+<script src="js/art.js?v=9"></script>
+<script src="js/story.js?v=9"></script>
+<script src="js/engine.js?v=9"></script>
 </body>
 </html>

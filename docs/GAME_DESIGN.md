@@ -416,9 +416,10 @@ Footsteps, knocks, glass taps, stair and floorboard creaks, doors, near breathin
 
 - **Text box** with a typewriter effect; slow lines for dread (capped at ~4 seconds so they never outlast reading speed).
 - **Sidebar:** Phone (unread badge; buzzes when she writes), Pocket (keepsakes with descriptions that change with the story), Log (the rewriting backlog), Skip (fast-forward through read text), Save, Load, Sound (volume slider), Menu.
-- **Menu settings:** text speed (Slow / Normal / Fast / Instant), game speed (1× / 1.5× / 2× / 3×, which shortens the silent beats but not the choice timers).
-- **Saving:** automatic at the start of every scene; one quick-save slot at the exact line or choice. Loading silently replays the scene up to that line, so no refusal or keepsake is applied twice.
-- **Fast-forward:** skips lines already seen (tracked across playthroughs), stops at new text and every choice.
+- **Menu settings:** text speed (Slow / Normal / Fast / Instant), game speed (1× / 1.5× / 2× / 3×, which shortens the silent beats but not the choice timers), skip (Read text / All text).
+- **Saving:** automatic at the start of every scene, a quick-save slot (Q / R), and ten save slots, all at the exact line or choice. Each slot shows the day's seal, the day and place, the line on screen and when it was saved; overwriting or deleting asks twice. Loading silently replays the scene up to that line, so no refusal or keepsake is applied twice. The Load panel is also on the title screen.
+- **Timed choices wait for the system panels:** a choice timer pauses while Save, Load or Menu is open, and only then. The phone, pocket and log don't stop the clock.
+- **Fast-forward:** runs silently through lines already read (remembered by what they say, across playthroughs, so script edits never mark new lines as read) and stops before the first new line, so it arrives with its full sound. It always stops at choices. With Skip set to All text it runs through unread text too.
 - **Countdown seal** (top right), **red thread** (lower screen), **phone camera viewfinder** (REC, timestamp, ISO, battery, face-detect box).
 - **Title screen:** remembers you ("You came back"), counts down in real time, shows her unread messages, and reflects your last ending.
 - **Controls:** click / Space / Enter to advance, 1–9 for choices, F skip, Q quick save, R quick load, P phone, I pocket, L log, M mute, Esc menu.
@@ -469,7 +470,7 @@ A **node** is a scene: `{ bg, rain, chars, item, ambient, lines, choices | go | 
 ### State
 - **`S` (per playthrough):** current node, day, family, lost, refusals, debt, items, flags. Saved at the start of every scene.
 - **`mem` (per browser, across playthroughs):** plays, seen lines, tab-leaves, endings found, last ending, the wedding date, her messages and attention.
-- **Storage keys:** `redenvelope.save`, `.quick`, `.mem`, `.settings`, `.vol`. All reads are guarded, so the game runs with storage blocked.
+- **Storage keys:** `redenvelope.save`, `.quick`, `.slots`, `.mem`, `.settings`, `.vol`. All reads are guarded, so the game runs with storage blocked.
 
 ### Rendering
 SVG layers per scene (with an ink-wobble displacement filter) → a canvas lighting pass (darkness with light holes, flicker) → canvas fog → canvas rain → CSS film grain, dust and vignette. One `requestAnimationFrame` loop drives parallax, lighting, fog, rain and dust.
@@ -515,7 +516,7 @@ Playtests run in headless Microsoft Edge driven over the Chrome DevTools Protoco
 - **Synthesized audio:** textures (rain, drone, clock) hold up; human sounds (whispers, breathing, footsteps) sound synthetic. A drop-in `audio/` folder of CC0 recordings would replace them one at a time.
 - **Hand-coded vector art:** stylized and consistent, but the reason the game shows so little.
 - **Discovery:** some of the best material (the rewriting Log, the wall photo) is easy to miss.
-- **One quick-save slot.**
+- **Saves live in the browser** (localStorage): they don't follow the player to another device, and clearing site data erases them.
 
 ### Roadmap
 1. A quiet nudge toward the Log and the family photo, without explaining them.

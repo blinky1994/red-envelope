@@ -14,25 +14,37 @@
   const NUMERALS = ['〇', '一', '二', '三', '四', '五', '六', '七'];
   const SAVE_KEY = 'redenvelope.save';
   const QUICK_KEY = 'redenvelope.quick';
+  const SLOTS_KEY = 'redenvelope.slots';
+  const SLOT_COUNT = 10;
   const SETTINGS_KEY = 'redenvelope.settings';
   const MEM_KEY = 'redenvelope.mem';
 
   // localStorage can throw (private mode, blocked storage) — the game must still run.
   const store = {
     get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
-    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
     del(k) { try { localStorage.removeItem(k); } catch (e) {} },
   };
 
   // `mem` survives across playthroughs; the game uses it to remember you.
   const mem = Object.assign({ plays: 0, leftEnvelope: false, tabLeaves: 0, finished: 0, seen: {} }, store.get(MEM_KEY) || {});
+  // Read lines used to be remembered by position ("road:3"), which every
+  // script edit shifted. They're remembered by what they say now.
+  if (Object.keys(mem.seen).some(k => k.includes(':'))) mem.seen = {};
 
   // Player settings. Text speed is ms per character (0 = instant); pace
-  // speeds up the silent beats and pauses between lines.
+  // speeds up the silent beats and pauses between lines; skip 'all' lets
+  // fast-forward run through unread text too.
   const TEXT_SPEED = { slow: 38, normal: 24, fast: 11, instant: 0 };
-  const settings = Object.assign({ textSpeed: 'normal', pace: 1 }, store.get(SETTINGS_KEY) || {});
+  const settings = Object.assign({ textSpeed: 'normal', pace: 1, skip: 'read' }, store.get(SETTINGS_KEY) || {});
   const saveSettings = () => store.set(SETTINGS_KEY, settings);
   const saveMem = () => store.set(MEM_KEY, mem);
+  // Read lines are saved a moment later, and at once if the page goes away.
+  let memTimer = null;
+  const flushMem = () => { if (memTimer) { clearTimeout(memTimer); memTimer = null; saveMem(); } };
+  const saveMemSoon = () => { clearTimeout(memTimer); memTimer = setTimeout(flushMem, 800); };
+  addEventListener('pagehide', flushMem);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) flushMem(); });
 
   const newState = () => ({ node: null, day: null, family: ['ama', 'mom', 'wen'], lost: [], refusals: 0, flags: {}, items: [] });
 
@@ -429,6 +441,19 @@
   let nodeSnap = null;   // the state as this scene began: quick saves replay from here
   let fastTo = null;     // when restoring, silently replay lines up to this index
   let lastShown = 0;     // index of the line currently on screen
+  // Everything in flight belongs to the game that started it. Loading, or
+  // leaving for the title, cancels it, so a stale pause or choice timer can't
+  // reach into the next game.
+  let flowGen = 0;
+  function stopFlow() {
+    flowGen++;
+    clearTimeout(choiceTimer);
+    choiceTimer = null; timerSpec = null; timerLeft = 0;
+    clearTimeout(typeTimer);
+    typing = false; awaitingChoice = false; busy = false; bigLock = false; fastTo = null;
+    hideBig();
+    clearChoices();
+  }
   function goto(id, resumeAt = null) {
     node = STORY[id];
     if (!node) { console.error('Missing story node:', id); return; }
@@ -464,19 +489,30 @@
       fastTo = null;
       lastShown = lineIdx - 1;
       if (line.do) { line.do(S, mem); saveMem(); }
-      applyScene(line);
+      const big = line.big ? val(line.big) : null;
+      const text = big ? null : val(line.t);
+      // Fast-forward runs silently through what you've read. Anything new stops
+      // it before it plays, so a new line arrives with all its sound.
+      if (big || text) {
+        curKey = seenKey(big || text);
+        curSeen = !!mem.seen[curKey];
+        if (skipping && !curSeen && settings.skip !== 'all') { setSkip(false); toast('New text'); }
+        mem.seen[curKey] = 1;
+        saveMemSoon();
+      }
+      applyScene(line, skipping);
       updateHud();
-      if (line.big) { showBig(val(line.big), val(line.sub)); return; }
-      const text = val(line.t);
+      if (big) { showBig(big, val(line.sub)); return; }
       if (text) { showText(line.who, text, line.style, line.slow); return; }
+      const gen = flowGen;
       if (line.beat) { // a held breath: text gone, only the sound of the room
         el.textbox.hidden = true;
         hideBig();
         busy = true;
-        setTimeout(() => { busy = false; next(); }, pause(line.beat));
+        setTimeout(() => { if (gen !== flowGen) return; busy = false; next(); }, pause(line.beat));
         return;
       }
-      if (line.wait) { busy = true; setTimeout(() => { busy = false; next(); }, pause(line.wait)); return; }
+      if (line.wait) { busy = true; setTimeout(() => { if (gen !== flowGen) return; busy = false; next(); }, pause(line.wait)); return; }
     }
     fastTo = null;
     lastShown = lines.length;
@@ -502,10 +538,6 @@
     backlog.push({ whoKey: who, who: el.speaker.textContent, text: resolveText(text), cls: style || (sp ? sp.cls || '' : 'narr') });
     if (backlog.length > 120) backlog.shift();
     if (who === 'bride') twitchThread();
-    // Remember which lines have been read, so fast-forward knows where to stop.
-    curKey = `${S.node}:${lineIdx - 1}`;
-    curSeen = !!mem.seen[curKey];
-    mem.seen[curKey] = 1;
     // Slow lines are for dread, not for waiting: long ones speed up to finish in ~4s.
     const base = TEXT_SPEED[settings.textSpeed] ?? 24;
     const speed = base === 0 ? 0 : slow ? Math.max(30, Math.min(70, 4200 / resolveText(text).length)) * base / 24 : base;
@@ -517,6 +549,15 @@
   const CORRECTION = /\[\[([^|\]]*)\|([^\]]*)\]\]/g;
   const resolveText = t => t.replace(CORRECTION, '$2');
   let unskippable = false;
+
+  // A line counts as read by what it says, in which scene, so editing the
+  // script never marks a new line as read. (FNV-1a keeps the keys short.)
+  function seenKey(text) {
+    const s = `${S.node}\n${resolveText(text)}`;
+    let h = 0x811c9dc5;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    return (h >>> 0).toString(36);
+  }
 
   function typeOut(raw, speed = 24) {
     clearTimeout(typeTimer);
@@ -576,23 +617,46 @@
   }
 
   // Timed choices: hesitate and the choice is made for you (node.timer = { ms, go, do }).
-  let choiceTimer = null;
+  // The clock stops only while you're in the menu, saving or loading.
+  let choiceTimer = null, timerSpec = null, timerFill = null, timerEnds = 0, timerLeft = 0;
+  function armTimer(ms) {
+    timerEnds = Date.now() + ms;
+    timerLeft = 0;
+    choiceTimer = setTimeout(() => pick({ go: timerSpec.go, do: timerSpec.do }), ms);
+    const fill = timerFill;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (fill !== timerFill || !choiceTimer) return;
+      fill.style.transitionDuration = `${Math.max(0, timerEnds - Date.now())}ms`;
+      fill.style.transform = 'scaleX(0)';
+    }));
+  }
+  function holdTimer() {
+    if (!choiceTimer) return;
+    clearTimeout(choiceTimer);
+    choiceTimer = null;
+    timerLeft = Math.max(1, timerEnds - Date.now());
+    timerFill.style.transitionDuration = '0ms';
+    timerFill.style.transform = getComputedStyle(timerFill).transform;
+  }
+  function releaseTimer() {
+    if (!timerLeft || choiceTimer || !awaitingChoice || !timerSpec) return;
+    armTimer(Math.max(1500, timerLeft));
+  }
   function showChoices(list) {
     awaitingChoice = true;
     el.advance.classList.remove('show');
     el.choices.innerHTML = '';
+    timerSpec = null;
+    timerLeft = 0;
     const timer = val(node.timer);
     if (timer) {
       const bar = document.createElement('div');
       bar.className = 'choice-timer';
       bar.innerHTML = '<span></span>';
       el.choices.appendChild(bar);
-      const fill = bar.firstElementChild;
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        fill.style.transitionDuration = `${timer.ms}ms`;
-        fill.style.transform = 'scaleX(0)';
-      }));
-      choiceTimer = setTimeout(() => pick({ go: timer.go, do: timer.do }), timer.ms);
+      timerSpec = timer;
+      timerFill = bar.firstElementChild;
+      armTimer(timer.ms);
       Sound.ambient([...Sound.current().filter(a => a !== 'heart'), 'heart_fast']);
     }
     list.forEach((c, i) => {
@@ -634,6 +698,7 @@
     if (!awaitingChoice) return;
     awaitingChoice = false;
     clearTimeout(choiceTimer);
+    choiceTimer = null; timerSpec = null; timerLeft = 0;
     clearChoices();
     Sound.sfx('click');
     if (c.do) c.do(S, mem);
@@ -654,6 +719,7 @@
 
   // ---------------------------------------------------------------- screens
   function showTitle() {
+    stopFlow();
     started = false;
     Sound.ambient([]);
     Sound.setUndertow(0);
@@ -665,8 +731,8 @@
     el.countdown.hidden = true;
     const save = store.get(SAVE_KEY);
     el.btnContinue.hidden = !(save && save.node && STORY[save.node]);
-    const quick = store.get(QUICK_KEY);
-    $('#btn-quickload').hidden = !(quick && quick.snap && STORY[quick.snap.node]);
+    const loadTitle = $('#btn-load-title');   // absent if a stale cached index.html is paired with this script
+    if (loadTitle) loadTitle.hidden = !hasSaves();
     setSkip(false);
     let line = '';
     if (mem.plays > 0) line = 'You came back.';
@@ -688,6 +754,7 @@
 
   function begin(state, resumeAt = null) {
     Sound.init();
+    stopFlow();
     closeOverlays();
     setSkip(false);
     S = state;
@@ -1008,7 +1075,7 @@
     $('#panel-content').innerHTML = html;
     el.panel.hidden = false;
   }
-  const closeOverlays = () => { el.phone.hidden = true; el.panel.hidden = true; };
+  const closeOverlays = () => { el.phone.hidden = true; el.panel.hidden = true; releaseTimer(); };
 
   // What's in your pocket. Descriptions change as the story changes them.
   function pocketItems() {
@@ -1056,21 +1123,61 @@
   const seg = (key, opts) => `<div class="seg" data-set="${key}">${opts.map(([v, label]) =>
     `<button type="button" data-v="${v}" class="${String(settings[key]) === String(v) ? 'on' : ''}">${label}</button>`).join('')}</div>`;
   function openMenu() {
+    holdTimer();
     openPanel('Menu', `<div class="menu-panel">
       <div class="setting"><span>Text speed</span>${seg('textSpeed', [['slow', 'Slow'], ['normal', 'Normal'], ['fast', 'Fast'], ['instant', 'Instant']])}</div>
       <div class="setting"><span>Game speed</span>${seg('pace', [[1, '1×'], [1.5, '1.5×'], [2, '2×'], [3, '3×']])}</div>
+      <div class="setting"><span>Skip</span>${seg('skip', [['read', 'Read text'], ['all', 'All text']])}</div>
       <button class="menu-btn" data-act="resume">Resume</button>
       <button class="menu-btn" data-act="title">Return to title</button>
       <p class="empty">F fast-forward · Q quick save · R quick load · P phone · I pocket · L log · M mute</p></div>`);
   }
-  // Load: your quick save, or the automatic save from the start of the scene.
+  // Saves: the quick slot (Q / R), ten of your own, and the automatic save
+  // from the start of the current scene. Each shows the day's seal, where you
+  // were and the line on screen.
+  const getSlots = () => { const all = store.get(SLOTS_KEY); return Array.isArray(all) ? all : []; };
+  const loadable = rec => !!(rec && rec.snap && STORY[rec.snap.node]);
+  const DAY_WORDS = ['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven'];
+  const PLACES = { road: 'The mountain road', car: 'The car', car_env: 'The car', house: 'Ama’s house', house_watch: 'Ama’s house',
+    bedroom: 'Your old room', bedroom_fingers: 'Your old room', courtyard: 'The courtyard', temple: 'The temple',
+    linhouse: 'The Lin house', reservoir: 'The reservoir', hall: 'The hall', black: 'In the dark' };
+  const when = t => new Date(t).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  function recordAt(slot) {
+    if (slot === 'q') return store.get(QUICK_KEY);
+    if (slot === 'auto') { const a = store.get(SAVE_KEY); return a && a.node ? { snap: a, idx: 0, preview: 'The start of the current scene.' } : null; }
+    return getSlots()[slot] || null;
+  }
+  function slotRow(label, rec, actions) {
+    const head = `<small class="slot-no">${label}</small>`;
+    if (!loadable(rec)) return `<div class="save-slot is-empty"><div class="slot-seal">·</div><div class="slot-info">${head}<h4>Empty</h4></div><div class="slot-actions">${actions}</div></div>`;
+    const day = 'day' in rec ? rec.day : rec.snap.day, at = rec.node || rec.snap.node;
+    const n = day == null || at === 'morning' ? 1 : day >= 2 ? 8 - day : 7;   // the seal counts 七 → 〇
+    const bg = rec.place || (STORY[at] && typeof STORY[at].bg === 'string' ? STORY[at].bg : null);
+    return `<div class="save-slot"><div class="slot-seal">${day == null ? '七' : NUMERALS[day]}</div><div class="slot-info">${head}`
+      + `<h4>Day ${DAY_WORDS[n - 1]}${PLACES[bg] ? ` · ${PLACES[bg]}` : ''}</h4>`
+      + (rec.preview ? `<p>“${esc(rec.preview)}”</p>` : '')
+      + (rec.at ? `<small>${esc(when(rec.at))}</small>` : '')
+      + `</div><div class="slot-actions">${actions}</div></div>`;
+  }
+  const slotBtn = (act, slot, label, ok = true) =>
+    `<button class="menu-btn" data-act="${act}" data-slot="${slot}" data-label="${label}" ${ok ? '' : 'disabled'}>${label}</button>`;
+  const hasSaves = () => [store.get(QUICK_KEY), ...getSlots()].some(loadable);
+  function openSave() {
+    if (!started || !nodeSnap) return;
+    holdTimer();
+    const slots = getSlots();
+    openPanel('Save', slotRow('Quick save · Q', store.get(QUICK_KEY), slotBtn('save', 'q', 'Save'))
+      + Array.from({ length: SLOT_COUNT }, (_, i) => slotRow(`Slot ${i + 1}`, slots[i], slotBtn('save', i, 'Save'))).join(''));
+  }
   function openLoad() {
-    const quick = store.get(QUICK_KEY), auto = store.get(SAVE_KEY);
-    const when = t => new Date(t).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-    const slot = (act, title, sub, ok) => `<div class="save-slot"><div><h4>${title}</h4><p>${sub}</p></div>
-      <button class="menu-btn" data-act="${act}" ${ok ? '' : 'disabled'}>Load</button></div>`;
-    openPanel('Load', slot('loadquick', 'Quick save', quick ? `${esc(when(quick.at))} · “${esc(quick.preview)}”` : 'Empty. Press Save or Q during play.', !!quick)
-      + slot('loadauto', 'Start of scene', auto && auto.node ? 'Saved automatically when the current scene began.' : 'Empty.', !!(auto && auto.node)));
+    holdTimer();
+    const slots = getSlots(), quick = recordAt('q'), auto = recordAt('auto');
+    const spacer = '<span class="slot-del spacer" aria-hidden="true">✕</span>';   // keeps the Load buttons in line
+    openPanel('Load', slotRow('Quick save · R', quick, slotBtn('load', 'q', 'Load', loadable(quick)) + spacer)
+      + slotRow('Start of scene', auto, slotBtn('load', 'auto', 'Load', loadable(auto)) + spacer)
+      + Array.from({ length: SLOT_COUNT }, (_, i) => slotRow(`Slot ${i + 1}`, slots[i], loadable(slots[i])
+        ? slotBtn('load', i, 'Load') + `<button class="slot-del" data-act="del" data-slot="${i}" data-label="✕" title="Delete" aria-label="Delete slot ${i + 1}">✕</button>`
+        : slotBtn('load', i, 'Load', false) + spacer)).join(''));
   }
   $('#panel-content').addEventListener('click', e => {
     const opt = e.target.closest('.seg button');
@@ -1083,10 +1190,27 @@
     }
     const b = e.target.closest('[data-act]');
     if (!b) return;
+    const act = b.dataset.act, raw = b.dataset.slot;
+    const slot = raw === 'q' || raw === 'auto' ? raw : Number(raw);
+    // Overwriting or deleting a save asks twice.
+    $('#panel-content').querySelectorAll('.confirm').forEach(x => { if (x !== b) { x.classList.remove('confirm'); x.textContent = x.dataset.label; } });
+    if ((act === 'del' || (act === 'save' && loadable(recordAt(slot)))) && !b.classList.contains('confirm')) {
+      b.classList.add('confirm');
+      b.textContent = act === 'del' ? 'Delete?' : 'Overwrite?';
+      return;
+    }
+    if (act === 'del') {
+      const all = getSlots();
+      all[slot] = null;
+      store.set(SLOTS_KEY, all);
+      openLoad();
+      if (!started && $('#btn-load-title')) $('#btn-load-title').hidden = !hasSaves();
+      return;
+    }
     closeOverlays();
-    if (b.dataset.act === 'title') showTitle();
-    if (b.dataset.act === 'loadquick') quickLoad();
-    if (b.dataset.act === 'loadauto') { const a = store.get(SAVE_KEY); if (a) begin(Object.assign(newState(), a)); }
+    if (act === 'title') showTitle();
+    if (act === 'save') saveTo(slot);
+    if (act === 'load') loadRecord(recordAt(slot));
   });
   $('#btn-pocket').addEventListener('click', e => { e.stopPropagation(); openPocket(); });
   $('#btn-log').addEventListener('click', e => { e.stopPropagation(); openLog(); });
@@ -1264,26 +1388,35 @@
     toastTimer = setTimeout(() => { t.hidden = true; }, 1800);
   }
 
-  // A quick save is the scene's starting state plus how far into it you were.
+  // A save is the scene's starting state plus how far into it you were.
   // Loading replays the lines you'd already read silently, so nothing that
   // happened (a refusal, a keepsake) is applied twice.
-  function quickSave() {
-    if (!started || !nodeSnap) return;
+  function snapshot() {
     const preview = awaitingChoice ? 'A choice' : bigShowing ? el.big.innerText.split('\n')[0] : resolveText(fullText || '');
-    store.set(QUICK_KEY, { snap: JSON.parse(nodeSnap), idx: awaitingChoice ? Infinity : lastShown, at: Date.now(),
-      preview: preview.length > 70 ? preview.slice(0, 67) + '…' : preview });
-    toast('Saved');
+    return { snap: JSON.parse(nodeSnap), idx: awaitingChoice ? Infinity : lastShown, at: Date.now(),
+      day: S.day ?? null, node: S.node, place: World.current(),
+      preview: preview.length > 70 ? preview.slice(0, 67) + '…' : preview };
   }
-  function quickLoad() {
-    const q = store.get(QUICK_KEY);
-    if (!q || !q.snap) return;
-    begin(Object.assign(newState(), q.snap), q.idx === null ? Infinity : q.idx);
+  function saveTo(slot) {
+    if (!started || !nodeSnap) return;
+    let ok;
+    if (slot === 'q') ok = store.set(QUICK_KEY, snapshot());
+    else { const all = getSlots(); all[slot] = snapshot(); ok = store.set(SLOTS_KEY, all); }
+    toast(!ok ? 'Could not save. Storage is blocked.' : slot === 'q' ? 'Saved' : `Saved to slot ${slot + 1}`);
+  }
+  function loadRecord(rec) {
+    if (!loadable(rec)) return;
+    if (!started) { mem.plays++; saveMem(); }
+    begin(Object.assign(newState(), rec.snap), rec.idx == null ? Infinity : rec.idx);   // Infinity (a choice) comes back from JSON as null
     toast('Loaded');
   }
+  const quickSave = () => saveTo('q');
+  const quickLoad = () => loadRecord(store.get(QUICK_KEY));
 
-  // Fast-forward: races through lines you've already read, stops at anything
-  // new and at every choice.
+  // Fast-forward: races silently through lines you've already read, stops at
+  // anything new (next() checks) and at every choice.
   function setSkip(on) {
+    if (on && started && !curSeen && !awaitingChoice && settings.skip !== 'all') { toast('New text · Menu → Skip: All text'); on = false; }
     skipping = !!on && started;
     $('#btn-skip').classList.toggle('active', skipping);
   }
@@ -1293,15 +1426,14 @@
     if (busy) return;
     if (bigShowing) { bigLock = false; advance(); return; }
     if (el.textbox.hidden) return;
-    if (!curSeen) { setSkip(false); toast('New text'); return; }
     if (typing) finishTyping();
     advance();
   }, 70);
 
   $('#btn-skip').addEventListener('click', e => { e.stopPropagation(); setSkip(!skipping); });
-  $('#btn-save').addEventListener('click', e => { e.stopPropagation(); quickSave(); });
+  $('#btn-save').addEventListener('click', e => { e.stopPropagation(); openSave(); });
   $('#btn-load').addEventListener('click', e => { e.stopPropagation(); openLoad(); });
-  $('#btn-quickload').addEventListener('click', () => { mem.plays++; saveMem(); quickLoad(); });
+  $('#btn-load-title')?.addEventListener('click', e => { e.stopPropagation(); openLoad(); });
 
   // ---------------------------------------------------------------- input
   el.stage.addEventListener('click', e => {
@@ -1311,8 +1443,8 @@
   });
   document.addEventListener('keydown', e => {
     resetIdle();
-    if (!started) return;
     if (overlayOpen()) { if (e.key === 'Escape') closeOverlays(); return; }
+    if (!started) return;
     const key = e.key.toLowerCase();
     if (key === 'escape') { openMenu(); return; }
     if (key === 'p') { openPhone(); return; }
@@ -1321,7 +1453,7 @@
     if (key === 'm') { Sound.toggleMute(); syncVol(); return; }
     if (key === 'f') { setSkip(!skipping); return; }
     if (key === 'q') { quickSave(); return; }
-    if (key === 'r') { if (store.get(QUICK_KEY)) quickLoad(); return; }
+    if (key === 'r') { quickLoad(); return; }
     if (e.key === ' ' || e.key === 'Enter') {
       if (document.activeElement && document.activeElement.classList.contains('choice')) return;
       e.preventDefault();
